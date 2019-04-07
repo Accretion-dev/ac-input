@@ -14,7 +14,7 @@
       @keydown.left="ArrowLeft"
       @input="$emit('input', $event.target.value)"
     >
-      <pre ref="calculator" :class="`${prefixCls}-calculator`">{{value?value:String(placeholder)}}</pre>
+      <pre ref="calculator" :class="`${prefixCls}-calculator`">{{ value?value:String(placeholder) }}</pre>
     </input>
   </span>
 </template>
