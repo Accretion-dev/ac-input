@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <h1> Test enviroment for ac-input</h1>
+    <test name="all"/>
     <div>
       <ac-input v-model="value1" placeholder="value1"/>
     </div>
@@ -19,9 +20,11 @@
 </template>
 
 <script>
+import test from './components/test.vue'
 
 export default {
   name: 'app',
+  components: {test},
   data () {
     return {
       value1: '',

@@ -3,13 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "test": "vue-cli-service serve",
+    "test": "npm run watch-once; vue-cli-service serve",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "watch": "npx babel -D --source-maps inline --watch selenium-src --out-dir selenium --no-babelrc --presets=es2015"
+    "watch": "npx babel -D --source-maps inline --out-dir selenium --no-babelrc --presets=es2015 --watch selenium-src",
+    "watch-once": "npx babel -D --source-maps inline --out-dir selenium --no-babelrc --presets=es2015 selenium-src "
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "core-js": "^2.6.5",
     "vue": "^2.6.6"
   },

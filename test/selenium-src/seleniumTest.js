@@ -17,7 +17,12 @@ async function openChrome(url) {
 async function createHttpServer(port) {
   http.createServer(function (req, res) {
     let data = req.url.slice(1)
-    res.writeHead(200, { 'Content-Type': 'text/json'})
+    res.writeHead(200, {
+      'Content-Type': 'text/json',
+      'Access-Control-Allow-Origin':'*',
+      "Access-Control-Allow-Headers":"Authorization,Origin, X-Requested-With, Content-Type, Accept",
+      "Access-Control-Allow-Methods":"GET,POST"
+    })
     res.write(JSON.stringify({ok: true, data}))
     res.end()
   }).listen(port)
