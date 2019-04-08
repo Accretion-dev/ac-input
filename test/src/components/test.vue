@@ -35,7 +35,7 @@ export default {
         headers: {'X-Requested-With': 'XMLHttpRequest'},
         responseType: 'json',
       })
-      console.log(result)
+      console.log('test', this.name, 'result:', result)
     }
   }
 }

@@ -24,5 +24,6 @@ module.exports = {
     'vue/no-parsing-error': 'off',
     'vue/html-indent': 'off',
     'no-unused-vars': 'off',
+    'no-console': 'off',
   }
 }

@@ -6,7 +6,7 @@ module.exports = {
   },
   configureWebpack: {
     plugins: [
-      new SeleniumTest(testConfig),
+      //new SeleniumTest(testConfig),
     ]
   }
 }

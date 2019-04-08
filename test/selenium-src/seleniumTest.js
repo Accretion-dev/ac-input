@@ -8,10 +8,107 @@ import fs from 'fs'
 import os from 'os'
 const {Builder, By, Key, until, WebDriver} = require('selenium-webdriver')
 const Http = require('selenium-webdriver/http')
+const options = require('../testConfig.json')
 let driver
 let executor, sessionID
 
-async function doTest(driver) {
+const modifierKeys = [
+  Key.CTRL,
+  Key.ALT,
+  Key.SHIFT,
+]
+
+async function sendKeys({el, keys, interval, delay}) {
+  if (!Array.isArray(keys)) {
+    keys = Array.from(keys)
+  }
+  if (delay){
+    await driver.sleep(delay)
+  }
+  for (let each of keys) {
+    let actions = driver.actions()
+    if (Array.isArray(each)) {
+      let reversed = []
+      for (let eacheach of each) {
+        if (modifierKeys.includes(eacheach)) {
+          actions = actions.keyDown(eacheach)
+          reversed.push(eacheach)
+        } else {
+          actions = actions.sendKeys(eacheach)
+        }
+      }
+      for (let eacheach of reversed.reverse()) {
+        actions = actions.keyUp(eacheach)
+      }
+      await actions.perform()
+    } else {
+      await actions.sendKeys(each).perform()
+    }
+    await driver.sleep(interval)
+  }
+}
+
+async function changeComment ({id, comment}) {
+  let template=`
+    let comment = document.querySelector("#${id} span.comment")
+    comment.textContent = \`${comment}\`
+  `
+  driver.executeScript(template)
+}
+
+async function testAll () {
+  console.log('test all')
+}
+async function testStretch () {
+  let data, keys, input
+  let id = 'stretch'
+  let interval = 10
+  let app = await driver.findElement({id: 'app'})
+  let root = await driver.findElement({id})
+  let inputs = await root.findElements({tagName: 'input'})
+  let comment = await root.findElement(By.css("span.comment"))
+  changeComment({id, comment: 'test stretch (input and delete)'}); await driver.sleep(500)
+  input = inputs[0]
+  await input.click()
+  await sendKeys({el: input, keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+  keys = [...Array(50).keys()].map(_ => Key.BACK_SPACE)
+  await sendKeys({el: input, keys, interval})
+  input = inputs[1]
+  await input.click()
+  await sendKeys({el: input, keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+  keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
+  await sendKeys({el: input, keys, interval})
+  input = inputs[2]
+  await input.click()
+  await sendKeys({el: input, keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+  keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
+  await sendKeys({el: input, keys, interval})
+
+  changeComment({id, comment: 'test tab and shift+tab to go next and previous'}); await driver.sleep(500)
+  input = inputs[0]
+  await input.click()
+  await sendKeys({el: input, keys: [Key.TAB, Key.TAB], interval: 300, delay: 200})
+  await sendKeys({el: input, keys: [[Key.SHIFT, Key.TAB], [Key.SHIFT, Key.TAB]], interval: 300, delay: 200})
+
+  changeComment({id, comment: 'click input with text will select all'}); await driver.sleep(500)
+  input = inputs[1]
+  await input.click()
+  await sendKeys({el: input, keys: [Key.BACK_SPACE], interval: 300, delay: 200})
+
+  input = inputs[2]
+  await input.click()
+  await sendKeys({el: input, keys: [Key.BACK_SPACE], interval: 300, delay: 200})
+
+  input = inputs[0]
+  await input.click()
+
+  changeComment({id, comment: 'all done'}); await driver.sleep(500)
+  changeComment({id, comment: ''})
+}
+
+let tests = {
+  testStretch,
+  testAll,
 }
 async function openChrome(url) {
   let browser = 'chrome'
@@ -26,7 +123,6 @@ async function openChrome(url) {
     executor = await driver.getExecutor()
   }
   await driver.get(url)
-  await doTest(driver)
 }
 async function createHttpServer(port) {
   let portUsed = await tcpPortUsed.check(port, 'localhost')
@@ -41,6 +137,12 @@ async function createHttpServer(port) {
       })
       res.write(JSON.stringify({ok: true, data}))
       res.end()
+      if (req.method === 'GET') {
+        let name = `test${data[0].toUpperCase()}${data.slice(1)}`
+        if (name in tests) {
+          tests[name]()
+        }
+      }
     }).listen(port)
     console.log('\tcreate new debug http server at', `http://localhost:${port}`)
   } else {
@@ -72,5 +174,8 @@ class SeleniumTest {
   }
 
 }
-
+if (require.main === module) {
+  openChrome(`http://localhost:${options.appPort}`)
+  createHttpServer(options.seleniumPort)
+}
 export default SeleniumTest
