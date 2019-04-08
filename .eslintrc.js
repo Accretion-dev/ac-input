@@ -23,5 +23,6 @@ module.exports = {
     'vue/html-self-closing': 'off',
     'vue/no-parsing-error': 'off',
     'vue/html-indent': 'off',
+    'no-unused-vars': 'off',
   }
 }

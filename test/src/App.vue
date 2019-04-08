@@ -1,44 +1,41 @@
 <template>
   <div id="app">
     <h1> Test enviroment for ac-input</h1>
-    <test name="all"/>
-    <div>
-      <ac-input v-model="value1" placeholder="value1"/>
-    </div>
-    <div>
-      <ac-input v-model="value2" placeholder="value2"/>
-      <ac-input v-model="value3" placeholder="value3"/>
-      <ac-input v-model="value4"/>
-    </div>
-    <div>
-      <p> value1: "{{value1}}" </p>
-      <p> value2: "{{value2}}" </p>
-      <p> value3: "{{value3}}" </p>
-      <p> value4: "{{value4}}" </p>
-    </div>
+    <test-block title="All tests" name="all">
+      <p class="test-title"> All tests: <test name="all" text="Run"/> </p>
+      <ul>
+        <li> <p class="test-title"> Test auto stretch: <test name="stretch" text="Run"/> </p> </li>
+      </ul>
+    </test-block>
+    <test-block title="Test auto stretch" name="stretch">
+      <div>
+        <ac-input v-model="values[0]" placeholder="value"/>
+        <p> value1: "{{values[0]}}" </p>
+      </div>
+    </test-block>
   </div>
 </template>
 
 <script>
+import testBlock from './components/test-block.vue'
 import test from './components/test.vue'
 
 export default {
   name: 'app',
-  components: {test},
+  components: {testBlock, test},
   data () {
     return {
-      value1: '',
-      value2: '',
-      value3: '',
-      value4: '',
-      list1: [
-
-      ]
+      values: [...Array(10).keys()].map(_ => '')
     }
   }
-
 }
 </script>
 
 <style>
+h1 {
+  text-align: center;
+}
+.test-title {
+  font-weight: bolder;
+}
 </style>

@@ -1,9 +1,9 @@
 <template>
-  <div>
-    <button @click="doTest">
-      {{ name }}
-    </button>
-  </div>
+  <span>
+    <Button type="info" @click="doTest" size="small">
+      {{ text }}
+    </Button>
+  </span>
 </template>
 
 <script>
@@ -19,7 +19,11 @@ export default {
     name: {
       required: true,
       type: String,
-    }
+    },
+    text: {
+      required: true,
+      type: String,
+    },
   },
   data () {
     return {

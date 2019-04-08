@@ -1,5 +1,5 @@
 <template>
-  <span>
+  <span :class="`${prefixCls}-root`">
     <input
       ref="input"
       :value="value"
@@ -107,24 +107,27 @@ export default {
       console.log('blur')
     },
     async onValueChange (newValue, oldValue) {
-      this.$refs.input.style.width = this.$refs.calculator.offsetWidth + 1 +"px"
+      this.$refs.input.style.width = this.$refs.calculator.offsetWidth + 5 +"px"
     }
   }
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 $pre: ac-input;
 $fontFamily: 'Courier New';
-.#{$pre} {
+.#{$pre}-root {
   font-family: #{$fontFamily};
+}
+.#{$pre} {
+  font-family: inherit;
   font-size: inherit;
   text-align: left;
 }
 .#{$pre}-calculator {
   position: absolute;
   visibility: hidden;
-  font-family: #{$fontFamily};
+  font-family: inherit;
   color: gray;
   font-size: inherit;
 }
