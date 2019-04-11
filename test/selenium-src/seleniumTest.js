@@ -9,107 +9,179 @@ import os from 'os'
 const {Builder, By, Key, until, WebDriver} = require('selenium-webdriver')
 const Http = require('selenium-webdriver/http')
 const options = require('../testConfig.json')
-let driver
+let driver, t
 let executor, sessionID
 
 const modifierKeys = [
-  Key.CTRL,
+  Key.CONTROL,
   Key.ALT,
   Key.SHIFT,
+  Key.META,
 ]
+let keyPrintMap = new Map()
+for (let each of Array.from('~!@#$%^&*()_+|}{POIUYTREWQASDFGHJKL:"?><MNBVCXZ"}'+"`1234567890-=\\][poiuytrewqasdfghjkl;'/.,mnbvcxz'")) {
+  keyPrintMap.set(each, each)
+}
+let specialKeys = {
 
-async function sendKeys({el, keys, interval, delay}) {
-  if (!Array.isArray(keys)) {
-    keys = Array.from(keys)
-  }
-  if (delay){
-    await driver.sleep(delay)
-  }
-  for (let each of keys) {
-    let actions = driver.actions()
-    if (Array.isArray(each)) {
-      let reversed = []
-      for (let eacheach of each) {
-        if (modifierKeys.includes(eacheach)) {
-          actions = actions.keyDown(eacheach)
-          reversed.push(eacheach)
-        } else {
-          actions = actions.sendKeys(eacheach)
-        }
+}
+
+
+let tasks = {}
+class Tester {
+  constructor ({name, driver, rootSelector, commentSelector, keySelector}) {
+    if (typeof(rootSelector)!=='string') throw Error('root selector must be a string')
+    tasks[name] = this
+    this.name = name
+    this.driver = driver
+    this.d = this.driver
+    this.rootSelector = rootSelector
+    let root = driver.findElement(By.css(rootSelector))
+    this.root = root
+    this.r = root
+    this.commentSelector = commentSelector || 'span.selenium-comment'
+    this.keySelector = keySelector || 'span.selenium-key'
+    this.running = true
+    let template=`
+      if (!window.seleniumRoot) {
+        window.seleniumRoot = new Map()
+        window.seleniumComment = new Map()
+        window.seleniumKey = new Map()
       }
-      for (let eacheach of reversed.reverse()) {
-        actions = actions.keyUp(eacheach)
-      }
-      await actions.perform()
-    } else {
-      await actions.sendKeys(each).perform()
+      let root = document.querySelector("${this.rootSelector}")
+      if (!root) { throw Error(\`no root element found with css(${this.rootSelector})\`) }
+      window.seleniumRoot.set("${this.name}", root)
+      let comment = root.querySelector("${this.commentSelector}")
+      if (!comment) { throw Error(\`no comment element found with css(${this.commentSelector})\`) }
+      window.seleniumComment.set("${this.name}", comment)
+      let key = root.querySelector("${this.keySelector}")
+      if (!key) { throw Error(\`no key element found with css(${this.commentSelector})\`) }
+      window.seleniumKey.set("${this.name}", key)
+    `
+    let result = this.driver.executeScript(template)
+  }
+  setRunning (bool) {
+    this.running = bool
+  }
+  async sendKeys({keys, interval, delay}) {
+    if (!Array.isArray(keys)) {
+      keys = Array.from(keys)
     }
-    await driver.sleep(interval)
+    if (delay){
+      await this.driver.sleep(delay)
+    }
+    for (let each of keys) {
+      if (!this.running) {
+        t.changeComment('', null, each)
+        throw Error('Stop in sendKeys at sending:', each)
+      }
+      let actions = this.driver.actions()
+      if (Array.isArray(each)) {
+        let reversed = []
+        for (let eacheach of each) {
+          if (modifierKeys.includes(eacheach)) {
+            actions = actions.keyDown(eacheach)
+            reversed.push(eacheach)
+          } else {
+            actions = actions.sendKeys(eacheach)
+          }
+        }
+        for (let eacheach of reversed.reverse()) {
+          actions = actions.keyUp(eacheach)
+        }
+        await actions.perform()
+      } else {
+        await actions.sendKeys(each).perform()
+      }
+      if (interval) {
+        await this.driver.sleep(interval)
+      }
+    }
   }
-}
-
-async function changeComment ({id, comment}) {
-  let template=`
-    let comment = document.querySelector("#${id} span.comment")
-    comment.textContent = \`${comment}\`
-  `
-  driver.executeScript(template)
-}
-
-async function testAll () {
-  console.log('test all')
-}
-async function testStretch () {
-  let data, keys, input
-  let id = 'stretch'
-  let interval = 10
-  let app = await driver.findElement({id: 'app'})
-  let root = await driver.findElement({id})
-  let inputs = await root.findElements({tagName: 'input'})
-  let comment = await root.findElement(By.css("span.comment"))
-  changeComment({id, comment: 'test stretch (input and delete)'}); await driver.sleep(500)
-  input = inputs[0]
-  await input.click()
-  await sendKeys({el: input, keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
-  keys = [...Array(50).keys()].map(_ => Key.BACK_SPACE)
-  await sendKeys({el: input, keys, interval})
-  input = inputs[1]
-  await input.click()
-  await sendKeys({el: input, keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
-  keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
-  await sendKeys({el: input, keys, interval})
-  input = inputs[2]
-  await input.click()
-  await sendKeys({el: input, keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
-  keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
-  await sendKeys({el: input, keys, interval})
-
-  changeComment({id, comment: 'test tab and shift+tab to go next and previous'}); await driver.sleep(500)
-  input = inputs[0]
-  await input.click()
-  await sendKeys({el: input, keys: [Key.TAB, Key.TAB], interval: 300, delay: 200})
-  await sendKeys({el: input, keys: [[Key.SHIFT, Key.TAB], [Key.SHIFT, Key.TAB]], interval: 300, delay: 200})
-
-  changeComment({id, comment: 'click input with text will select all'}); await driver.sleep(500)
-  input = inputs[1]
-  await input.click()
-  await sendKeys({el: input, keys: [Key.BACK_SPACE], interval: 300, delay: 200})
-
-  input = inputs[2]
-  await input.click()
-  await sendKeys({el: input, keys: [Key.BACK_SPACE], interval: 300, delay: 200})
-
-  input = inputs[0]
-  await input.click()
-
-  changeComment({id, comment: 'all done'}); await driver.sleep(500)
-  changeComment({id, comment: ''})
+  async changeComment (comment, delay, stopMessage) {
+    let stop
+    let raw_comment = comment
+    if (!stopMessage && !this.running) {
+      comment = ''
+      stop = true
+    }
+    if (!comment) {
+      this.running = false
+    }
+    let template=`
+      window.seleniumComment.get("${this.name}").textContent = \`${comment}\`
+    `
+    let result = this.driver.executeScript(template)
+    if (stop) {
+      throw Error('Stop in comment with comment:', raw_comment)
+    }
+    if (delay) {
+      await this.driver.sleep(delay)
+    }
+  }
+  async changeKey (key) {
+    let template=`
+      window.seleniumKey.get("${this.name}").textContent = \`${key}\`
+    `
+    let result = this.driver.executeScript(template)
+  }
 }
 
 let tests = {
-  testStretch,
-  testAll,
+  async all () {
+    console.log('all')
+  },
+  async stretch (name) {
+    let data, keys, input
+    let id = 'stretch'
+    let interval = 0
+    let app = await driver.findElement({id: 'app'})
+    t = new Tester({name, driver, rootSelector: "#stretch"})
+    let root = await driver.findElement({id})
+    let inputs = await root.findElements({tagName: 'input'})
+    debugger
+
+    t.changeComment('test stretch (input and delete)', 500)
+    input = inputs[0]
+    await input.click()
+    await t.sendKeys({keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+    keys = [...Array(50).keys()].map(_ => Key.BACK_SPACE)
+    await t.sendKeys({keys, interval})
+    input = inputs[1]
+    await input.click()
+    await t.sendKeys({keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+    keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
+    await t.sendKeys({keys, interval})
+    input = inputs[2]
+    await input.click()
+    await t.sendKeys({keys: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+    keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
+    await t.sendKeys({keys, interval})
+
+    t.changeComment('test tab and shift+tab to go next and previous', 500)
+    input = inputs[0]
+    await input.click()
+    await t.sendKeys({keys: [Key.TAB, Key.TAB], interval: 300, delay: 200})
+    await t.sendKeys({keys: [[Key.SHIFT, Key.TAB], [Key.SHIFT, Key.TAB]], interval: 300, delay: 200})
+
+    t.changeComment('click input with text will select all', 500)
+    input = inputs[1]
+    await input.click()
+    await t.sendKeys({keys: [Key.BACK_SPACE], interval: 300, delay: 200})
+
+    input = inputs[2]
+    await input.click()
+    await t.sendKeys({keys: [Key.BACK_SPACE], interval: 300, delay: 200})
+
+    input = inputs[0]
+    await input.click()
+
+    t.changeComment('all done',500)
+    t.changeComment('')
+  }
 }
+
+
 async function openChrome(url) {
   let browser = 'chrome'
   if (sessionID) {
@@ -128,19 +200,26 @@ async function createHttpServer(port) {
   let portUsed = await tcpPortUsed.check(port, 'localhost')
   if (!portUsed) {
     http.createServer(function (req, res) {
-      let data = req.url.slice(1)
+      let name = req.url.slice(1)
       res.writeHead(200, {
         'Content-Type': 'text/json',
         'Access-Control-Allow-Origin':'*',
         "Access-Control-Allow-Headers":"Authorization,Origin, X-Requested-With, Content-Type, Accept",
         "Access-Control-Allow-Methods":"GET,POST"
       })
-      res.write(JSON.stringify({ok: true, data}))
+      res.write(JSON.stringify({ok: true, data: name}))
       res.end()
       if (req.method === 'GET') {
-        let name = `test${data[0].toUpperCase()}${data.slice(1)}`
-        if (name in tests) {
-          tests[name]()
+        console.log('do test:', name)
+        if (!(tasks[name] && tasks[name].running)) {
+          tests[name](name).then(() => {
+            console.log('finish test:', name)
+          }).catch(error => {
+            if (!error.message.startsWith('Stop')) throw error
+          })
+        } else {
+          console.log('stop test:', name)
+          tasks[name].setRunning(false)
         }
       }
     }).listen(port)
