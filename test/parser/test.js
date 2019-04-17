@@ -60,7 +60,9 @@ test('test complex parser', t => {
   }
   function d (str) {
     let result = parse(str, {tracer})
-    console.log(result)
+    console.log(str)
+    console.log('    ====>')
+    console.log(JSON.stringify(result, null, 2))
   }
   function same (todo, value) {
     let result
@@ -170,7 +172,6 @@ test('test complex parser', t => {
   sameD([
     `good:good bad:bad nice:'nice nice' fine:fine`,
   ], {$and: [{good:'good'}, {bad:'bad'}, {nice: 'nice nice'}, {fine:'fine'}]})
-  return
   sameD([
     `good:good bad:bad || nice:'nice nice' fine:fine`,
   ], {$or: [{$and: [{good:'good'}, {bad:'bad'}]},{$and:[{nice: 'nice nice'}, {fine:'fine'}]}]})
@@ -180,6 +181,37 @@ test('test complex parser', t => {
   sameD([
     `good:good (bad:bad || nice:'nice nice') fine:fine`,
   ], {$and: [{good:'good'}, {$or: [{bad:'bad'}, {nice: 'nice nice'}]}, {fine:'fine'}]})
+  sameD([
+    `good:good && good1:good1 || bad:bad bad1: bad1 || nice:'nice nice' nice1: nice1 || fine:fine fine1: fine1`,
+  ], {$or: [
+    {$and:[{good:'good'},{good1:'good1'}]},
+    {$and:[{bad:'bad'}, {bad1:'bad1'}]},
+    {$and:[{nice:'nice nice'},{nice1:'nice1'}]},
+    {$and:[{fine:'fine'},{fine1:'fine1'}]},
+  ]})
+  sameD([
+    `good:good && good1:good1 || ( bad:bad (bad1: bad1 || nice:'nice nice') nice1: nice1 ) || fine:fine fine1: fine1`,
+  ], {$or: [
+    {$and:[{good:'good'},{good1:'good1'}]},
+    {$and: [{bad:'bad'}, {$or:[{bad1:'bad1'}, {nice: 'nice nice'}]}, {nice1: 'nice1'}]},
+    {$and:[{fine:'fine'},{fine1:'fine1'}]},
+  ]})
+  d(
+    `title|startsWith: 'foo bar' || tags|elemMatch:{tagname|startsWith: astro, time|lt: '2018'} || tags.tag_name: 'good' && tags.time|lt: '2018'`,
+  )
+  sameD([
+    `title|startsWith: 'foo bar' || tags|elemMatch:{tagname|startsWith: astro, time|lt: '2018'} || tags.tag_name: 'good' && tags.time|lt: '2018'`,
+  ], {$or: [
+    {title: {$startsWith: 'foo bar'}},
+    {tags: {$elemMatch: {
+      tagname: {$startsWith: 'astro'},
+      time: {$lt: '2018'}
+    }}},
+    {$and: [
+      {'tags.tag_name': 'good'},
+      {'tags.time': {$lt: '2018'}},
+    ]}
+  ]})
 
 	t.pass()
 })
