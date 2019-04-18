@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vue-cli-service serve",
     "selenium-test": "nodemon --watch run-backend.js --exec 'babel-node --inspect run-backend.js --presets=env'",
-    "parser-ava": "nodemon --watch ./parser --exec 'babel-node --inspect node_modules/ava/profile.js ./parser/test.js '",
+    "parser-ava": "nodemon --watch ./parser --exec 'babel-node --presets=env --inspect -- node_modules/ava/profile.js ./parser/test.js'",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"

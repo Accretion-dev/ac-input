@@ -9,10 +9,19 @@
 }
 
 start
+  = StartOR
+  / StartAND
+  / StartNOT
+  / StartBlock
+
+StartOR "startor"
   = ws10 v:OR    ws01 { return v }
-  / ws10 v:AND   ws01 { return v }
-  / ws10 v:NOT   ws01 { return v }
-  / ws10 v:Block ws01 { return v }
+StartAND "startand"
+  = ws10 v:AND   ws01 { return v }
+StartNOT "startnot"
+  = ws10 v:NOT   ws01 { return v }
+StartBlock "startblock"
+  = ws10 v:Block ws01 { return v }
 
 ws "whitespace"
   = chars:[ \t\n\r]* { return chars.join("") }
@@ -25,9 +34,6 @@ ws10 'ws10'
   = ws
 // means when start <  cursorPos <= end, do auto complete
 ws01 'ws01'
-  = ws
-// means when start <= cursorPos <= end, do auto complete
-ws11 'ws11'
   = ws
 
 OR "or"
@@ -61,19 +67,18 @@ Block "block"
   / ValueBlock
 
 NestedORBlock 'nestedorblock'
-  = NestedStart ws01 v:OR ws10 NestedEnd  {return v}
+  = NestedStart ws10 v:OR ws01 NestedEnd  {return v}
 NestedANDBlock 'nestedandblock'
-  = NestedStart ws01 v:AND ws10 NestedEnd  {return v}
+  = NestedStart ws10 v:AND ws01 NestedEnd  {return v}
 NestedNOTBlock 'nestednotblock'
-  = NestedStart ws01 v:NOT ws10 NestedEnd  {return v}
+  = NestedStart ws10 v:NOT ws01 NestedEnd  {return v}
 NestedPairBlock 'nestedpairblock'
-  = NestedStart ws01 v:Pair ws10 NestedEnd  {return v}
+  = NestedStart ws10 v:Pair ws01 NestedEnd  {return v}
 NestedValueBlock 'nestedvalueblock'
-  = NestedStart ws01 v:ValueBlock ws10 NestedEnd  {return v}
+  = NestedStart ws10 v:ValueBlock ws01 NestedEnd  {return v}
 
 NestedStart = "("
 NestedEnd = ")"
-
 
 ANDSeperator
   = ws01 '&&' { return text() }
@@ -94,12 +99,15 @@ ws01Object 'ws01object'
 Object "object"
   = ObjectStart ws10Object
     pairs:(
-      head:Pair ws01Object
-      tail:(ObjectSeperator ws10Object m:Pair ws01Object { return m; })*
+      head:ObjectElement ws01Object
+      middle:(ObjectSeperator ws10Object m:ObjectElement ws01Object { return m; })*
+      tail:(
+        ObjectSeperator ws01Object
+      )?
       {
         var result = {};
 
-        [head].concat(tail).forEach(function(element) {
+        [head].concat(middle).forEach(function(element) {
           Object.assign(result, element)
         });
 
@@ -108,6 +116,13 @@ Object "object"
     )?
     ObjectEnd
     { return pairs !== null ? pairs: {} }
+
+ObjectElement "objectelement"
+  = Pair
+  / v:ValueObject { return {[v]: null}}
+
+ValueObject 'valueobject'
+  = Value
 
 ObjectStart = "{"
 ObjectEnd = "}"
@@ -123,8 +138,11 @@ Array "array"
   = ArrayStart ws10Array
     values:(
       head:ValueArray ws01Array
-      tail:(ArraySeperator ws10Array v:ValueArray ws01Array { return v; })*
-      { return [head].concat(tail); }
+      middle:(ArraySeperator ws10Array v:ValueArray ws01Array { return v; })*
+      tail:(
+        ArraySeperator ws01Array
+      )?
+      { return [head].concat(middle); }
     )?
     ArrayEnd
     { return values !== null ? values : []; }
@@ -134,37 +152,48 @@ ArrayEnd = "]"
 ArraySeperator = ','
 
 Pair "pair"
-  = keys:Key ws PairSeperator ws v:ValuePair {
+  = v:PairComplete {
+    let {keys, value} = v
     if (keys.length===1) {
-      return {[keys[0]]: v}
+      return {[keys[0]]: value}
     } else {
       keys = keys.map(_ => _)
       let key = keys.splice(0,1)[0]
       let pop = keys.pop()
-      v = {[`\$${pop}`]: v}
+      value = {[`\$${pop}`]: value}
       let length = keys.length
       for (let i=0; i<length; i++) {
         pop = keys.pop()
-        v = {[`\$${pop}`]: v}
+        value = {[`\$${pop}`]: value}
       }
-      return {[key]: v}
+      return {[key]: value}
     }
   }
-  / keys:Key ws ws01PS {
+  / v:PairIncomplete {
+    let {keys} = v
     if (keys.length===1) {
       return {[keys[0]]: null}
     } else {
       keys = keys.map(_ => _)
       let key = keys.splice(0,1)[0]
       let pop = keys.pop()
-      let v = {[`\$${pop}`]: null}
+      let value = {[`\$${pop}`]: null}
       let length = keys.length
       for (let i=0; i<length; i++) {
         pop = keys.pop()
-        v = {[`\$${pop}`]: v}
+        value = {[`\$${pop}`]: value}
       }
-      return {[key]: v}
+      return {[key]: value}
     }
+  }
+
+PairComplete
+  = keys:Key ws PairSeperator ws value:ValuePair {
+    return {keys, value}
+  }
+PairIncomplete
+  = keys:Key ws ws01PS {
+    return {keys}
   }
 
 ws01PS "pws01"
@@ -177,12 +206,7 @@ PairSeperator
   = ':'
 
 OP "op"
-  = chars:[0-9a-zA-Z_$]* { return chars.join("") }
-
-//Key "key"
-//  = key:KeyValue ws OPSeperator ws op:OP { return [key, op] }
-//  / key:KeyValue ws OPSeperator { return [key, ''] }
-//  / key:KeyValue { return [key] }
+  = chars:[0-9a-zA-Z_$]+ { return chars.join("") }
 
 Key "key"
   = head:KeyValue
@@ -219,18 +243,25 @@ ValueArray "value:array"
   = Value
 
 Value "value"
-  = false
-  / null
-  / true
-  / Object
+  = ComplexValue
+  / SimpleValue
+
+ComplexValue 'complexValue'
+  = Object
   / Array
-  / String
+
+SimpleValue 'simplevalue'
+  = String
+  / true
+  / false
+  / null
   / SimpleString
   / Number
 
-false = "false" { return false; }
-null  = "null"  { return null;  }
-true  = "true"  { return true;  }
+
+false = "false" { return false }
+null  = "null"  { return null  }
+true  = "true"  { return true  }
 
 DIGIT  = [0-9]
 
