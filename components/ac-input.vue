@@ -31,6 +31,7 @@ import _ from 'lodash'
 const {DateTime} = require('luxon')
 import pinyin4js from 'pinyin4js'
 import dropdown from './dropdown'
+import equal from 'deep-equal'
 
 /* TODO
 1. pinyin modual
@@ -61,7 +62,8 @@ export default {
       timer: {},
       matchStr: '',
       dataCal: null,
-      config2use: {}
+      config2use: {},
+      dropdownObj: null,
     }
   },
   computed: {
@@ -90,18 +92,19 @@ export default {
   created () {
   },
   mounted () {
-    this.onDataUpdate(true)
+    this.onDataUpdate({init: true})
     this.onValueChange(this.value, '')
     this.$watch('value', this.onValueChange)
     this.$watch('data', this.onDataUpdate)
-    this.$watch('configs', this.onDataUpdate)
+    this.$watch('configs', this.onConfigUpdate)
+    this.dropdownObj = this.$children[0]
   },
   methods: {
     ArrowUp () {
-      console.log('up')
+      this.dropdownObj.up()
     },
     ArrowDown () {
-      console.log('down')
+      this.dropdownObj.down()
     },
     ArrowLeft () {
       console.log('left')
@@ -130,13 +133,20 @@ export default {
     },
     onBlur () {
       if (this.config2use.droppable) {
-        this.status.drop = false
+        //this.status.drop = false
       }
     },
     onInput (event) {
       this.$emit('input', event.target.value)
     },
-    onDataUpdate (init) {
+    onConfigUpdate (newValue, oldValue) {
+      // configs could be write on the html template, they will be changed when the page is re-rendered
+      // so test the configs here
+      if (equal(newValue, oldValue)) return
+      this.onDataChange(newValue, oldValue)
+    },
+    onDataUpdate (newValue, oldValue) {
+      let datainit = newValue.datainit
       let data
       for (let eachKey of Object.keys(this.inputConfigs)) {
         this.$set(this.config2use, eachKey, this.inputConfigs[eachKey])
@@ -233,8 +243,7 @@ export default {
           })
         }
       }
-
-      if (!init) {
+      if (!datainit) {
         this.updateDropdown()
       }
     },

@@ -2,7 +2,7 @@
   <span v-if="drop" :class="{[prefixCls]: true}">
     <template v-if="match"> <!--show match info-->
       <div :class="{[`${prefixCls}-wrapper`]: true}">
-        <div v-for="{show, cls, group, index, count} of items" :key="`${count}`" :class="{[cls]: true}">
+        <div v-for="({show, cls, group, index, count}, key) of items" :key="key" :class="{[cls]: true, [`${prefixCls}-selected`]: count===selectIndex}">
           {{ show }}
         </div>
       </div>
@@ -12,7 +12,7 @@
         <div :class="{[`${prefixCls}-item-group`]: true}">
           info of {{ configs.datatype }}s
         </div>
-        <div v-for="{key, show} of statisticItems" :key="key" :class="{[`${prefixCls}-item-group`]: true}">
+        <div v-for="{key, show} of statisticItems" :key="key" :class="{[`${prefixCls}-item`]: true}">
           {{ key }}: {{ show }}
         </div>
       </div>
@@ -53,6 +53,7 @@ export default {
       statistic: { },
       statisticItems: [],
       processedData: [],
+      selectIndex: -1,
     }
   },
   computed: {
@@ -63,7 +64,8 @@ export default {
         let groupItem = this.groups[group]
         if (groupItem) {
           if (!(count===0 && group === 'default')) {
-            items.push({show: group, cls: `${prefixCls}-item-group`, count: group})
+            items.push({show: group, cls: `${prefixCls}-item-group`, count})
+            count += 1
           }
           for (let {show, index} of groupItem) {
             items.push({show, group, cls: `${prefixCls}-item`, index, count})
@@ -108,16 +110,38 @@ export default {
   mounted () {
   },
   methods: {
+    down () {
+      if (!this.items.length) return
+      this.selectIndex += 1
+      if (this.selectIndex >= this.items.length) this.selectIndex = 0
+      let item = this.items[this.selectIndex]
+      if (item.cls.endsWith('group')) this.selectIndex += 1
+    },
+    up () {
+      if (!this.items.length) return
+      this.selectIndex -= 1
+      if (this.selectIndex < 0) this.selectIndex = this.items.length - 1
+      let item = this.items[this.selectIndex]
+      if (item.cls.endsWith('group')) this.selectIndex -= 1
+      if (this.selectIndex < 0) this.selectIndex = this.items.length - 1
+    },
     onMatchChange (newValue, oldValue) {
-      console.log(newValue, oldValue)
+      this.selectIndex = -1
       if (!newValue) return
-      /* TODO:
-        for number and data process: >=, >, <=, <
-      */
+      let type = this.configs.datatype
+      if (type === 'number' || type === "date") {
+        if (newValue.startsWith('>') || newValue.startsWith('<')) { // logical mod
+
+          return
+        }
+      } else {
+
+      }
       this.processedData = this.data
     },
     onDataChange (newValue, oldValue) {
       let type =this.configs.datatype
+      this.selectIndex = -1
       if (type === 'string') {
         this.statistic = {
           total: newValue.length
@@ -160,16 +184,27 @@ export default {
 <style lang="scss" scoped>
 $pre: ac-input-dropdown;
 .#{$pre} {
-  background-color: bisque;
+  background-color: #f2f2f2;
   position: absolute;
   width: max-content;
 }
 .#{$pre}-item-wrapper {
 }
 .#{$pre}-item-group {
+  font-weight: 600;
+  padding: 0px 3px;
+  border-style: dashed;
+  border-width: 1px 1px 0px 1px;
 }
 .#{$pre}-item {
+  padding: 0px 3px;
+  border-style: dashed;
+  border-width: 0px 1px;
+}
+.#{$pre}-item:last-child {
+  border-width: 0px 1px 1px 1px;
 }
 .#{$pre}-selected {
+  background-color: #a9ff96;
 }
 </style>
