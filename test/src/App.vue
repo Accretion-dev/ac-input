@@ -64,7 +64,12 @@
       </test-block>
       <test-block title="Test pre" name="pre" id="pre">
         <div>
-          <ac-input-pre v-model="values[9]" placeholder="value-pre"/>
+          <input v-model="cursors[9]" style="width: 30px;"/>
+          <button @click="$set(cursors, 9, Number(cursors[9]) - 1)"> - </button>
+          <button @click="$set(cursors, 9, Number(cursors[9]) + 1)"> + </button>
+        </div>
+        <div>
+          <ac-input-pre v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]"/>
           <p>
             <span> value: "{{values[9]}}" </span>
           </p>
@@ -100,7 +105,8 @@ export default {
   name: 'app',
   data () {
     return {
-      values: [...Array(20).keys()].map(_ => ''),
+      values:  [...Array(20).keys()].map(_ => ''),
+      cursors: [...Array(20).keys()].map(_ => 0),
       cursorPos: 0,
       matchStr: '',
       datas: [
@@ -128,6 +134,9 @@ export default {
     onCursorChange (pos) {
       this.cursorPos = pos
     }
+  },
+  created () {
+    this.values[9] = '0123456789\n0123456789\n0123456789\n'
   }
 }
 </script>
