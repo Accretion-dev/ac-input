@@ -62,6 +62,14 @@
           </p>
         </div>
       </test-block>
+      <test-block title="Test pre" name="pre" id="pre">
+        <div>
+          <ac-input-pre v-model="values[9]" placeholder="value-pre"/>
+          <p>
+            <span> value: "{{values[9]}}" </span>
+          </p>
+        </div>
+      </test-block>
     </test-env>
   </div>
 </template>
