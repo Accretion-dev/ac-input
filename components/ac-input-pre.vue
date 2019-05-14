@@ -66,76 +66,58 @@ export default {
     this.$watch('cursor', this.onCursorChange)
   },
   methods: {
-    countSetCursor (cursor, nodes, data, level) {
-      if (!level) level = 0
+    setCursor (cursor) {
+      console.log(`set cursor to`, cursor)
+      let line = 1
+      let offset = 0
+      let column = 0
+      let node = null
+      let thisoffset = 0
+      let reset
+
       if (cursor<0) {
         this.$emit('update:cursor', 0)
-        data.reset = 0
-        return false
-      }
-      for (let index in nodes.childNodes) {
-        let thenode = nodes.childNodes[index]
-        if (thenode.nodeType === 3) { // text
-          if (data.offset + thenode.data.length >= cursor) { // get position in a text
-            data.thisoffset = cursor - data.offset
-            data.node = thenode
-            return false
-          } else {
-            data.offset += thenode.data.length
-          }
-        } else if (thenode.tagName === 'DIV') {
-          data.line += 1
-          data.offset += 1
-          if (data.offset === cursor) {
-            data.thisoffset = 0
-            data.node = thenode.childNodes[0]
-            return false
-          }
-          let good = this.countSetCursor(cursor, thenode, data, level+1)
-          if (!good) return false
-        } else if (thenode.tagName === 'BR') {
-          if (nodes.childNodes.length===1) {
-            return true
-          }
-          data.line += 1
-          data.offset += 1
-          if (data.offset === cursor) {
-            if (Number(index) + 1 <= nodes.childNodes.length - 1) { // at start of the next line
-              data.thisoffset = 0
-              data.node = nodes.childNodes[Number(index)+1]
-              return false
-            } else { // at end of previous line
-              this.$emit('update:cursor', data.offset-1)
-              data.reset = data.offset-1
-              return false
+        reset = 0
+      } else if (cursor===0) {
+        node = this.$refs.input
+      } else {
+        let nodes = this.$refs.input
+        for (let index in nodes.childNodes) {
+          let thenode = nodes.childNodes[index]
+          if (thenode.nodeType === 3) { // text
+            if (offset + thenode.data.length >= cursor) { // get position in a text
+              thisoffset = cursor - offset
+              node = thenode
+              offset += thisoffset
+              break
+            } else {
+              offset += thenode.data.length
+            }
+          } else if (thenode.tagName === 'BR') {
+            line += 1
+            offset += 1
+            if (offset === cursor) {
+              if (Number(index) + 1 <= nodes.childNodes.length - 1) { // at start of the next line
+                thisoffset = 0
+                node = nodes.childNodes[Number(index)+1]
+              } else { // at end of previous line
+                this.$emit('update:cursor', offset-1)
+                reset = offset-1
+              }
+              break
             }
           }
         }
-      }
-      if (level==0) {
-        if (cursor > data.offset) {
-          this.$emit('update:cursor', data.offset)
-          data.reset = data.offset
+        if (cursor > offset) {
+          this.$emit('update:cursor', offset)
+          reset = offset
         }
       }
-      return true
-    },
-    setCursor (cursor) {
-      console.log(`set cursor to`, cursor)
-      let data = {
-        line:1,
-        offset:0,
-        column:0,
-        node: null,
-        thisoffset: 0,
-      }
-      this.countSetCursor(cursor, this.$refs.input, data)
-
-      if (data.reset !== undefined) return
+      if (reset !== undefined) return
       let range = document.createRange()
       let sel = window.getSelection()
       this.offset = cursor
-      range.setStart(data.node, data.thisoffset)
+      range.setStart(node, thisoffset)
       range.collapse(true)
       sel.removeAllRanges()
       sel.addRange(range)
