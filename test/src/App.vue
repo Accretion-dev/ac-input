@@ -69,7 +69,17 @@
           <button @click="$set(cursors, 9, Number(cursors[9]) + 1)"> + </button>
         </div>
         <div>
-          <ac-input-pre v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]"/>
+          start:
+          <input v-model="highlights[9].start" style="width: 30px;"/>
+          <button @click="$set(highlights[9], 'start', Number(highlights[9].start) - 1)"> - </button>
+          <button @click="$set(highlights[9], 'start', Number(highlights[9].start) + 1)"> + </button>
+          end:
+          <input v-model="highlights[9].end" style="width: 30px;"/>
+          <button @click="$set(highlights[9], 'end', Number(highlights[9].end) - 1)"> - </button>
+          <button @click="$set(highlights[9], 'end', Number(highlights[9].end) + 1)"> + </button>
+        </div>
+        <div>
+          <ac-input-pre v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]" :highlights="[highlights[9]]"/>
           <p>
             <span> value: "{{values[9]}}" </span>
           </p>
@@ -113,6 +123,7 @@ export default {
     return {
       values:  [...Array(20).keys()].map(_ => ''),
       cursors: [...Array(20).keys()].map(_ => 0),
+      highlights: [...Array(20).keys()].map((_,index) => ({start:0, end:0, color: 'rgba(0,255,0,0.5)', message:`index:${index}`})),
       cursorPos: 0,
       matchStr: '',
       datas: [

@@ -1,5 +1,9 @@
 <template>
   <span :class="`${prefixCls}`">
+    <pre v-for="{head, middle, tail, color, message} of highlightsData"
+         ref="highlights"
+         :class="`${prefixCls}-highlight-root`"
+    >{{ head }}<span :title="message" :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
     <pre
       ref="placeholder"
       :class="`${prefixCls}-placeholder`"
@@ -40,6 +44,7 @@ export default {
     cursor: { type: Number, default: 0 },
     placeholder: { type: [String], default: 'value' },
     disabled: { type: Boolean, default: false },
+    highlights: {type: Array, default: _ => ([])},
   },
   data () {
     return {
@@ -55,6 +60,18 @@ export default {
     }
   },
   computed: {
+    highlightsData () {
+      return this.highlights.map(_ => {
+        let {start, end, color, message} = _
+        if (!color) color='yellow'
+        if (!message) message=''
+        let string = this.value.replace(/[^\n]/g, ' ')
+        let head = string.slice(0,start)
+        let middle = string.slice(start,end+1)
+        let tail = string.slice(end+1,)
+        return {head, middle, tail, color, message}
+      })
+    }
   },
   created () {
   },
@@ -161,10 +178,19 @@ export default {
         this.setCursor(newValue)
       }
     },
+    changeHighlightSize ({width, height}) {
+      if (this.$refs.highlights) {
+        for (let each of this.$refs.highlights) {
+          each.style.width  = width + 'px'
+          each.style.height = height + 'px'
+        }
+      }
+    },
     onSizeChange () {
       let el = this.$refs.input.getBoundingClientRect()
       this.$el.style.width  =  el.width + 'px'
       this.$el.style.height = el.height + 'px'
+      this.changeHighlightSize({width:el.width, height:el.height})
     },
     onValueChange (newValue, oldValue) {
       if (this.$refs.input.innerText.trim()!==newValue.trim()) {
@@ -323,6 +349,19 @@ $fontFamily: 'Courier New';
   margin: 0px;
   padding: 2px;
   padding-right: 3px;
+}
+.#{$pre}-highlight-root {
+  font-family: inherit;
+  font-size: inherit;
+  position: absolute;
+  top:0;
+  left:0;
+  margin: 0px;
+  padding: 2px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.#{$pre}-highlight {
 }
 //.#{$pre}-input:after{
 //  content:'\0200B'
