@@ -13,10 +13,12 @@
           <li>test the focusSelectAllText config: the middle input is set to false, other two inputs set to true</li>
         </ul>
         <div>
-          <ac-input v-model="values[0]" placeholder="value0" :configs="{focusSelectAllText: true}"/>
-          <ac-input v-model="values[1]" placeholder="value1" />
-          <ac-input v-model="values[2]" placeholder="value2" :configs="{focusSelectAllText: true}"/>
-          <ac-input v-model="values[0]" placeholder="disabled" :disabled="true"/>
+          <div>
+            <ac-input v-model="values[0]" placeholder="value0" :focusSelectAllText="true"/>
+            <ac-input v-model="values[1]" placeholder="value1" />
+            <ac-input v-model="values[2]" placeholder="value2" :focusSelectAllText="true"/>
+            <ac-input v-model="values[0]" placeholder="disabled" :disabled="true"/>
+          </div>
           <p>
             <span> value0: "{{values[0]}}" </span>
             <span> value1: "{{values[1]}}" </span>
@@ -79,13 +81,13 @@
           <button @click="$set(highlights[9], 'end', Number(highlights[9].end) + 1)"> + </button>
         </div>
         <div>
-          <ac-input-pre v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]" :highlights="[highlights[9]]"/>
+          <ac-input v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]" :highlights="[highlights[9]]" :focusSelectAllText="true"/>
           <p>
             <span> value: "{{values[9]}}" </span>
           </p>
         </div>
         <div>
-          <ac-input-pre v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[10]"/>
+          <ac-input v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[10]"/>
           <p>
             <span> value: "{{values[10]}}" </span>
           </p>

@@ -36,23 +36,39 @@ let tests = {
     await t.init()
     await t.initScroll()
     let root = await driver.findElement(By.css(rootSelector))
-    let inputs = await root.findElements({tagName: 'input'})
+    let inputs = await root.findElements(By.css('.ac-input-input'))
     t.changeComment('test stretch (input and delete)', 500)
     input = inputs[0]
     await t.actions({actions: {click: input}})
-    await t.actions({actions: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+    await t.actions({actions: [
+      '!@#$%^&*()_',
+      [Key.CONTROL, Key.ENTER],
+      '+<>1234567890',
+      [Key.CONTROL, Key.ENTER],
+      '-=qwertyuiop[]\'\"'
+    ], interval})
     keys = [...Array(20).keys()].map(_ => Key.BACK_SPACE)
     await t.actions({actions: keys, interval})
 
     input = inputs[1]
     await t.actions({actions: {click: input}})
-    await t.actions({actions: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+    await t.actions({actions: [
+      '!@#$%^&*()_',
+      [Key.CONTROL, Key.ENTER],
+      '+<>1234567890',
+      [Key.CONTROL, Key.ENTER],
+      '-=qwertyuiop[]\'\"'
+    ], interval})
     keys = [...Array(30).keys()].map(_ => Key.BACK_SPACE)
     await t.actions({actions: keys, interval})
 
     input = inputs[2]
     await t.actions({actions: {click: input}})
-    await t.actions({actions: '!@#$%^&*()_+<>1234567890-=qwertyuiop[]\'\"', interval})
+    await t.actions({actions: [
+      '!@#$%^&*()_',
+      '+<>1234567890',
+      '-=qwertyuiop[]\'\"'
+    ], interval})
     keys = [...Array(35).keys()].map(_ => Key.BACK_SPACE)
     await t.actions({actions: keys, interval})
 

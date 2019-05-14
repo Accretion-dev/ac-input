@@ -1,30 +1,26 @@
 <template>
-  <span :class="`${prefixCls}-root`">
-    <input
+  <span :class="{[`${prefixCls}`]: true, [`${prefixCls}-disabled`]: disabled}">
+    <pre v-for="({head, middle, tail, color, message}, index) of highlightsData"
+         :key="index"
+         ref="highlights"
+         :class="`${prefixCls}-highlight-root`"
+    >{{ head }}<span :title="message" :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
+    <pre
+      ref="placeholder"
+      :class="`${prefixCls}-placeholder`"
+      ><b>{{ placeholder }}</b></pre>
+    <pre
       ref="input"
-      :value="value"
-      :class="prefixCls"
-      :placeholder="placeholder"
-      :disabled="disabled"
-      @keydown.enter.prevent="Enter"
-      @keydown.tab="Tab"
-      @keydown.up.prevent="ArrowUp"
-      @keydown.down.prevent="ArrowDown"
-      @keydown.right="ArrowRight"
-      @keydown.left="ArrowLeft"
-      @focus="onFocus($event);onCursorChange($event);"
-      @click="onCursorChange($event);"
-      @keyup="onCursorChange($event);"
-      @blur="onBlur"
-      @input="onInput"
-    />
-    <pre ref="calculator" :class="`${prefixCls}-calculator`">{{ calculatorValue }}</pre>
-    <div :class="{[`${prefixCls}-dropdown-wrapper`]: true}">
-      <dropdown :drop="status.drop" :match="matchStr" :data="dataCal" :configs="config2use" />
-    </div>
+      :class="`${prefixCls}-input`"
+      :contenteditable="!disabled"
+      @keydown="keydown"
+      @focus="onFocus($event)"
+      @blur="onBlur($event)"
+      @input="input"
+      @click="getCursor"
+    ></pre>
   </span>
 </template>
-
 <script>
 const prefixCls = 'ac-input'
 import _ from 'lodash'
@@ -40,16 +36,20 @@ import equal from 'deep-equal'
      * values
      * showValues
 */
+
 export default {
   name: 'ac-input',
-  components: {dropdown},
+  //components: {dropdown},
   props: {
     // basic for a input
-    value: { type: String, default: '', index: null, },
-    placeholder: { type: [String], default: '' },
+    value: { type: String, default: '' },
+    cursor: { type: Number, default: 0 },
+    placeholder: { type: [String], default: 'value' },
     disabled: { type: Boolean, default: false },
-    data: { type: [Object, Array, null], default () { return null }, },
-    configs: { type: Object, default () {return {}} },
+    highlights: {type: Array, default: _ => ([])},
+    focusSelectAllText: { type: Boolean, default: false},
+    droppable: { type: Boolean, default: true},
+    getCursorDelay: { type: Number, default: 5}
   },
   data () {
     return {
@@ -57,239 +57,292 @@ export default {
       status: {
         drop: false
       },
-      input: '',
-      cursorPosition: 0,
-      timer: {},
-      matchStr: '',
-      dataCal: null,
-      config2use: {},
-      dropdownObj: null,
+      offset: 0,
+      line: 0,
+      column: 0,
+      timer: {
+        cursor: null
+      },
+      inputObs: null
     }
   },
   computed: {
-    calculatorValue () {
-      return this.value?this.value:this.placeholder
-    },
-    inputConfigs () {
-      const defaultData = {
-        focusSelectAllText: false,
-        reportCursorDebounce: 100,
-        matchDebounce: 100,
-        droppable: false,
-        maxDrop: 30,
-        pinyin: true,
-        type: 'input', // could be input, select or reference
-        datatype: null,
-        matchStrGet: _ => _,
-        matchStrSet: null,
-        changeData: _ => null,
-        validator: _ => true,
-        groupOrder: null,
-      }
-      return Object.assign({}, defaultData, this.configs)
+    highlightsData () {
+      return this.highlights.map(_ => {
+        let {start, end, color, message} = _
+        if (!color) color='yellow'
+        if (!message) message=''
+        let string = this.value.replace(/[^\n]/g, ' ')
+        let head = string.slice(0,start)
+        let middle = string.slice(start,end+1)
+        let tail = string.slice(end+1,)
+        return {head, middle, tail, color, message}
+      })
     }
   },
   created () {
   },
   mounted () {
-    this.onDataUpdate({init: true})
+    this.onSizeChange(this.rootSize)
+    this.$watch('size', this.onSizeChange)
     this.onValueChange(this.value, '')
     this.$watch('value', this.onValueChange)
-    this.$watch('data', this.onDataUpdate)
-    this.$watch('configs', this.onConfigUpdate)
-    this.dropdownObj = this.$children[0]
+    this.$watch('cursor', this.onCursorChange)
   },
   methods: {
-    ArrowUp () {
-      this.dropdownObj.up()
+    setCursor (cursor) {
+      console.log(`set cursor to`, cursor)
+      let line = 1
+      let offset = 0
+      let column = 0
+      let node = null
+      let thisoffset = 0
+      let reset
+
+      if (cursor<0) {
+        this.$emit('update:cursor', 0)
+        reset = 0
+      } else if (cursor===0) {
+        node = this.$refs.input
+      } else {
+        let nodes = this.$refs.input
+        for (let index in nodes.childNodes) {
+          let thenode = nodes.childNodes[index]
+          if (thenode.nodeType === 3) { // text
+            if (offset + thenode.data.length >= cursor) { // get position in a text
+              thisoffset = cursor - offset
+              node = thenode
+              offset += thisoffset
+              break
+            } else {
+              offset += thenode.data.length
+            }
+          } else if (thenode.tagName === 'BR') {
+            line += 1
+            offset += 1
+            if (offset === cursor) {
+              if (Number(index) + 1 <= nodes.childNodes.length - 1) { // at start of the next line
+                thisoffset = 0
+                node = nodes.childNodes[Number(index)+1]
+              } else { // at end of previous line
+                this.$emit('update:cursor', offset-1)
+                reset = offset-1
+              }
+              break
+            }
+          }
+        }
+        if (cursor > offset) {
+          this.$emit('update:cursor', offset)
+          reset = offset
+        }
+      }
+      if (reset !== undefined) return
+      let range = document.createRange()
+      let sel = window.getSelection()
+      this.offset = cursor
+      range.setStart(node, thisoffset)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+      this.getCursor()
     },
-    ArrowDown () {
-      this.dropdownObj.down()
+    getCursorWrapper () {
+      let sel = window.getSelection()
+      let node = sel.focusNode
+      window.sel = sel
+      let line = 1
+      let offset = 0
+      let column = 0
+      let maxLength = this.$refs.input.childNodes.length
+      if (node === this.$refs.input) {
+        maxLength = sel.focusOffset
+      }
+      let nodes = Array.from(this.$refs.input.childNodes)
+      for (let thenode of nodes.slice(0,maxLength)) {
+        if (thenode === node) {
+          column = sel.focusOffset
+          offset += column
+          break
+        }
+        if (thenode.nodeType === 3) { // text
+          offset += thenode.data.length
+        } else if (thenode.tagName === 'BR') {
+          line += 1
+          offset += 1
+        }
+      }
+      this.line = line
+      this.column = column
+      if (this.cursor !== offset) {
+        this.offset = offset
+        this.$emit('update:cursor', offset)
+      }
+      console.log({line, column, offset})
     },
-    ArrowLeft () {
-      console.log('left')
+    getCursor() {
+      clearTimeout(this.timer.cursor)
+      this.timer.cursor = setTimeout(_ => {
+        this.getCursorWrapper()
+      }, this.getCursorDelay)
     },
-    ArrowRight () {
-      console.log('right')
+    onCursorChange (newValue, oldValue) {
+      if (newValue !== this.offset) {
+        this.setCursor(newValue)
+      }
+    },
+    changeHighlightSize ({width, height}) {
+      if (this.$refs.highlights) {
+        for (let each of this.$refs.highlights) {
+          each.style.width  = width + 'px'
+          each.style.height = height + 'px'
+        }
+      }
+    },
+    onSizeChange () {
+      let el = this.$refs.input.getBoundingClientRect()
+      this.$el.style.width  =  el.width + 'px'
+      this.$el.style.height = el.height + 'px'
+      this.changeHighlightSize({width:el.width, height:el.height})
+    },
+    onValueChange (newValue, oldValue) {
+      if (this.$refs.input.innerText!==newValue) {
+        this.$refs.input.innerText = newValue
+        this.getCursor()
+      }
+      if (!newValue) {
+        this.$refs.placeholder.style.removeProperty('visibility')
+        let {width, height} = this.$refs.placeholder.getBoundingClientRect()
+        this.$refs.input.style.width  = width + 'px'
+        this.$refs.input.style.height = height + 'px'
+      } else {
+        if (!oldValue) {
+          this.$refs.placeholder.style.visibility = 'hidden'
+          this.$refs.input.style.removeProperty('width')
+          this.$refs.input.style.removeProperty('height')
+        }
+      }
+      this.onSizeChange()
+    },
+    keydown(event) {
+      if (event.key === '=' && event.ctrlKey) {
+        event.preventDefault()
+        this.$emit('update:cursor', this.cursor + 1)
+        return
+      } else if (event.key === '-' && event.ctrlKey) {
+        event.preventDefault()
+        this.$emit('update:cursor', this.cursor - 1)
+        return
+      } else if (event.key === 'f' && event.ctrlKey) {
+        event.preventDefault()
+        this.onFocus()
+        return
+      }
+      console.log(event)
+      switch (event.key) {
+        case 'Tab':
+          this.Tab(event); break;
+        case 'Enter':
+          this.Enter(event); break;
+      }
+      if (!['Control', 'ModeChange', 'Shift'].includes(event.key)) {
+        this.getCursor()
+      }
     },
     Tab (event) {
-      let input = this.$refs.input
-      if (!(input.selectionStart === input.value.length || input.selectionEnd === input.value.length)) {
+      console.log('tab')
+    },
+    Enter (event) {
+      if (event.ctrlKey) {
+        let sel = window.getSelection()
+        let node = sel.baseNode
+        let offset = sel.baseOffset
+        if (node === this.$refs.input) {
+          let nodes = Array.from(this.$refs.input.childNodes)
+          node = nodes[offset]
+          let next = nodes[offset+1]
+          if (!node || node.tagName==='BR' && !next) {
+            document.execCommand('insertHtml', false, '<br><br>')
+          } else if (node.tagName==='BR' && (next && next.tagName==='BR')) {
+            document.execCommand('insertHtml', false, '<br><br>')
+            this.$nextTick(() => { // move cursor back
+              let range = document.createRange()
+              let sel = window.getSelection()
+              range.setStart(this.$refs.input, offset+1)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+            })
+          } else if (node.tagName==='BR' && (next && next.tagName!=='BR')){
+            document.execCommand('insertHtml', false, '<br><br>')
+            this.$nextTick(() => { // move cursor back
+              let range = document.createRange()
+              let sel = window.getSelection()
+              range.setStart(this.$refs.input, offset+1)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+            })
+          } else {
+            document.execCommand('insertHtml', false, '<br>')
+          }
+        } else if (node.nodeType === 3) {
+          if (offset !== node.data.length) {
+            document.execCommand('insertHtml', false, '<br>') // enter at middle of string
+            return
+          } else { // enter at end of a string
+            let nodes = Array.from(this.$refs.input.childNodes)
+            offset = nodes.findIndex(_ => _===node)
+            let next = nodes[offset+1]
+            let next2 = nodes[offset+2]
+            if (!next || (next.tagName==='BR' && (!next2))) { // end of strin
+              document.execCommand('insertHtml', false, '<br><br>')
+            } else if (next && next.tagName === 'BR') {
+              document.execCommand('insertHtml', false, '<br><br>')
+              this.$nextTick(() => { // move cursor back
+                let range = document.createRange()
+                let sel = window.getSelection()
+                range.setStart(this.$refs.input, offset+2)
+                range.collapse(true)
+                sel.removeAllRanges()
+                sel.addRange(range)
+              })
+            } else {
+              document.execCommand('insertHtml', false, '<br>')
+            }
+          }
+        } else {
+          debugger
+        }
+      } else {
         event.preventDefault()
       }
     },
-    Enter (event) {
-      console.log('enter')
-    },
     onFocus () {
-      if (this.config2use.focusSelectAllText) {
-        let input = this.$refs.input
-        input.selectionStart = 0
-        input.selectionEnd = input.value.length
-      }
-      if (this.config2use.droppable) {
-        this.status.drop = true
+      if (this.focusSelectAllText) {
+        setTimeout(_ => {
+          let input = this.$refs.input
+          if (input.hasChildNodes()) {
+            let range = document.createRange()
+            let sel = window.getSelection()
+            range.selectNodeContents(input)
+            sel.removeAllRanges()
+            sel.addRange(range)
+          }
+        },0)
       }
     },
     onBlur () {
-      if (this.config2use.droppable) {
-        //this.status.drop = false
-      }
     },
-    onInput (event) {
-      this.$emit('input', event.target.value)
-    },
-    onConfigUpdate (newValue, oldValue) {
-      // configs could be write on the html template, they will be changed when the page is re-rendered
-      // so test the configs here
-      if (equal(newValue, oldValue)) return
-      this.onDataChange(newValue, oldValue)
-    },
-    onDataUpdate (newValue, oldValue) {
-      let datainit = newValue.datainit
-      let data
-      for (let eachKey of Object.keys(this.inputConfigs)) {
-        this.$set(this.config2use, eachKey, this.inputConfigs[eachKey])
+    input (event) {
+      let value = event.target.innerText
+      // there is a known bug: the value must not be "\n", so if it is '\n', set to ""
+      if (value === '\n') {
+        event.target.innerText = ""
+        value = ""
       }
-      if (this.data) {
-        if (Array.isArray(this.data)) {
-          data = this.data
-        } else if (typeof(this.data) === 'object') {
-          if (this.data.matchStrGet && !this.data.matchStrSet) {
-            throw Error('if you provide matchStrGet, you must also provide matchStrSet')
-          }
-          for (let eachKey of Object.keys(this.inputConfigs)) {
-            if (this.data[eachKey]) {
-              this.$set(this.config2use, eachKey, this.data[eachKey])
-            }
-          }
-          if (!this.data.data) throw Error('should provide data.data if your data is a Object')
-          data = this.data.data
-          // notice that all configs will be overwrite by the last data
-          // be caution when you will change the data multiple times
-        }
-        // process data
-        if (!this.config2use.datatype) {
-          let sample = data[0]
-          if (sample === undefined) {
-            // to be process by if(!data.length)
-          } else if (typeof(sample) === 'object') {
-            if (sample instanceof Date) {
-              this.config2use.datatype = 'date'
-            } else {
-              this.dataCal = []
-              throw Error(`unsupported datatype: data[0]=${sample}`)
-            }
-          } else if (typeof(sample) === 'string') {
-            this.config2use.datatype = 'string'
-          } else if (typeof(sample) === 'number') {
-            this.config2use.datatype = 'number'
-          } else {
-            this.dataCal = []
-            throw Error(`unsupported datatype: data[0]=${sample}`)
-          }
-        }
-        if (!data.length) {
-          this.dataCal = []
-        } else if (this.config2use.datatype === 'date') {
-          this.dataCal = data.map(_ => {
-            let formated = DateTime.fromMillis(Number(_))
-            // console.log({raw: _.toISOString(), format: formated.toISO()})
-            return {
-              match: formated.toISO(),
-              show: formated.toISO(),
-              value: formated,
-            }
-          })
-        } else if (this.config2use.datatype === 'string') {
-          this.dataCal = data.map(_ => {
-            return {
-              match: _,
-              show: _,
-              value: _,
-            }
-          })
-        } else if (this.config2use.datatype === 'number') {
-          this.dataCal = data.map(_ => {
-            return {
-              match: String(_),
-              show: String(_),
-              value: _,
-            }
-          })
-        } else {
-          this.dataCal = this.data.data
-        }
-        this.dataCal.forEach((_, index) => {
-          _.index = index
-          _.group = []
-        })
-        if (this.data.getGroup) {
-          this.config2use.getGroup = this.data.getGroup
-          this.dataCal.forEach(_ => {
-            let group = this.data.getGroup(_.value)
-            if (group.length) {
-              _.group = [..._.group, ...group]
-            }
-          })
-        } else {
-          this.dataCal.forEach((_, index) => {
-            _.group.push('default')
-          })
-        }
-        if (this.pinyin && this.datatype === 'string') {
-          this.dataCal.forEach(_ => {
-            this.addPinyin(_)
-          })
-        }
-      }
-      if (!datainit) {
-        this.updateDropdown()
-      }
+      this.$emit('input', value)
     },
-    onValueChange (newValue, oldValue) {
-      this.$refs.input.style.width = this.$refs.calculator.offsetWidth + 5 +"px"
-      if (this.data) {
-        let matchStrGet = this.config2use.matchStrGet
-        let matchStr = matchStrGet(newValue)
-        if (matchStr !== this.matchStr) {
-          this.matchStr = matchStr
-          if (this.changeData) { // report the parent to change the data
-            if (this.changeData(this.matchStr, this.value)) {
-              this.$emit('data', this.changeData(this.matchStr, this.value))
-            }
-          }
-          clearTimeout(this.timer.match)
-          this.timer.match = setTimeout(() => {
-            this.$emit('match', this.matchStr)
-            this.updateDropdown()
-          }, this.matchDebounce)
-        }
-      }
-    },
-    onCursorChange (event) {
-      let pos = event.target.selectionStart
-      if (pos !== this.cursorPosition) {
-        this.cursorPosition = pos
-        clearTimeout(this.timer.cursor)
-        this.timer.cursor = setTimeout(() => {
-          this.$emit('cursor', this.cursorPosition)
-        }, this.reportCursorDebounce)
-      }
-    },
-    updateDropdown () {
-      // when call this function, this.dataCal and this.matchStr has been updated
-
-    },
-    addPinyin (dict) {
-      if (!dict.show.match(/[\u3400-\u9FBF]/)) return
-      let pinyin = pinyin4js.convertToPinyinString(dict.show, '', pinyin4js.WITHOUT_TONE)
-      if (typeof(dict.match) === 'string') {
-        dict.match = [dict.match, pinyin]
-      } else {
-        dict.match = [...dict.match, pinyin]
-      }
-    }
   }
 }
 </script>
@@ -297,16 +350,59 @@ export default {
 <style lang="scss">
 $pre: ac-input;
 $fontFamily: 'Courier New';
-.#{$pre}-root {
-  font-family: #{$fontFamily};
-  display: inline-flex;
-  flex-direction: column;
+[contenteditable]:focus {
+    outline: 0px solid transparent;
 }
 .#{$pre} {
+  font-family: #{$fontFamily};
+  position: relative;
+  display: inline-block;
+  border-style: solid;
+  border-width: thin;
+}
+.#{$pre}-disabled {
+  background-color: #ebebeb;
+  color: gray;
+}
+.#{$pre}-placeholder {
   font-family: inherit;
   font-size: inherit;
-  text-align: left;
+  position: absolute;
+  top:0;
+  left:0;
+  pointer-events: none;
+  margin: 0px;
+  padding: 2px;
+  padding-right: 3px;
+  color: darkgray;
 }
+.#{$pre}-input {
+  font-family: inherit;
+  font-size: inherit;
+  position: absolute;
+  top:0;
+  left:0;
+  margin: 0px;
+  padding: 2px;
+  padding-right: 3px;
+}
+.#{$pre}-highlight-root {
+  font-family: inherit;
+  font-size: inherit;
+  position: absolute;
+  top:0;
+  left:0;
+  margin: 0px;
+  padding: 2px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.#{$pre}-highlight {
+}
+//.#{$pre}-input:after{
+//  content:'\0200B'
+//}
+
 .#{$pre}-dropdown-wrapper {
   position: relative;
 }
