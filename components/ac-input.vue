@@ -11,6 +11,10 @@
          @click="changeMessage(1)"
          @contextmenu.prevent="changeMessage(-1)"
     >{{ head }}<span :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
+    <pre v-if="rangeCalculator"
+         ref="rangeCalculator"
+         :class="`${prefixCls}-rangeCalculator`"
+    >{{ rangeCalculator.head }}<span ref="range">{{ rangeCalculator.middle }}</span>{{ rangeCalculator.tail }}</pre>
     <pre
       ref="placeholder"
       :class="`${prefixCls}-placeholder`"
@@ -25,6 +29,7 @@
       @input="input"
       @click="getCursor"
     ></pre>
+    <div :style="{ position: 'absolute', left:0+'px', top:dropdownPosition.y+'px'}"> dropdown</div>
   </span>
 </template>
 <script>
@@ -57,6 +62,7 @@ export default {
     droppable: { type: Boolean, default: true},
     getCursorDelay: { type: Number, default: 5},
     showMessageDelay: { type: Number, default: 3000},
+    calculateCursorPosition: { type: Boolean, default: true}
   },
   data () {
     return {
@@ -65,18 +71,32 @@ export default {
         drop: false,
         showMessage: false,
         showMessageIndex: 0,
+        width: 0,
+        height: 0,
       },
       offset: 0,
       line: 0,
       column: 0,
+      range: null,
       timer: {
         cursor: null,
         showMessage: null,
       },
-      inputObs: null
     }
   },
   computed: {
+    rangeCalculator () {
+      if (this.calculateCursorPosition && this.range) {
+        let {start, end} = this.range
+        let string = this.value.replace(/[^\n]/g, ' ')
+        let head = string.slice(0,start)
+        let middle = string.slice(start,end+1)
+        let tail = string.slice(end+1,)
+        return {head, middle, tail}
+      } else {
+        return null
+      }
+    },
     highlightsData () {
       return this.highlights.map(_ => {
         let {start, end, color, message} = _
@@ -88,7 +108,17 @@ export default {
         let tail = string.slice(end+1,)
         return {head, middle, tail, color, message}
       })
-    }
+    },
+    dropdownPosition () {
+      if (this.calculateCursorPosition && this.range) {
+        let {x,y,width,height} = this.$refs.range.getBoundingClientRect()
+        return {x,y,style:{left:x+'px', top:y+height+'px'}}
+      } else {
+        let x = this.status.width
+        let y = this.status.height
+        return {x,y,style:{left:'0px', top:y+'px'}}
+      }
+    },
   },
   created () {
   },
@@ -104,7 +134,6 @@ export default {
       this.showMessage(this.status.showMessageIndex + delta)
     },
     mouseLeave(event) {
-      console.log('leave')
       if (this.timer.showMessage !== null) {
         clearTimeout(this.timer.showMessage)
       }
@@ -209,7 +238,6 @@ export default {
     getCursorWrapper () {
       let sel = window.getSelection()
       let node = sel.focusNode
-      window.sel = sel
       let line = 1
       let offset = 0
       let column = 0
@@ -237,7 +265,7 @@ export default {
         this.offset = offset
         this.$emit('update:cursor', offset)
       }
-      console.log({line, column, offset})
+      ///console.log({line, column, offset, node})
     },
     getCursor() {
       clearTimeout(this.timer.cursor)
@@ -262,6 +290,8 @@ export default {
       let el = this.$refs.input.getBoundingClientRect()
       this.$el.style.width  =  el.width + 'px'
       this.$el.style.height = el.height + 'px'
+      this.status.width = el.width
+      this.status.height = el.height
       this.changeHighlightSize({width:el.width, height:el.height})
     },
     onValueChange (newValue, oldValue) {
@@ -297,7 +327,6 @@ export default {
         this.onFocus()
         return
       }
-      console.log(event)
       switch (event.key) {
         case 'Tab':
           this.Tab(event); break;
@@ -423,37 +452,31 @@ $fontFamily: 'Courier New';
   background-color: #ebebeb;
   color: gray;
 }
-.#{$pre}-placeholder {
+@mixin ac-input-pre-common {
   font-family: inherit;
   font-size: inherit;
   position: absolute;
   top:0;
   left:0;
-  pointer-events: none;
   margin: 0px;
   padding: 2px;
   padding-right: 3px;
+}
+.#{$pre}-placeholder {
+  @include ac-input-pre-common;
+  pointer-events: none;
   color: darkgray;
 }
 .#{$pre}-input {
-  font-family: inherit;
-  font-size: inherit;
-  position: absolute;
-  top:0;
-  left:0;
-  margin: 0px;
-  padding: 2px;
-  padding-right: 3px;
+  @include ac-input-pre-common;
 }
 .#{$pre}-highlight-root {
-  font-family: inherit;
-  font-size: inherit;
-  position: absolute;
-  top:0;
-  left:0;
-  margin: 0px;
-  padding: 2px;
-  padding-right: 3px;
+  @include ac-input-pre-common;
+  pointer-events: none;
+}
+.#{$pre}-rangeCalculator {
+  @include ac-input-pre-common;
+  visibility: hidden;
   pointer-events: none;
 }
 .#{$pre}-highlight {
@@ -464,12 +487,5 @@ $fontFamily: 'Courier New';
 
 .#{$pre}-dropdown-wrapper {
   position: relative;
-}
-.#{$pre}-calculator {
-  position: absolute;
-  visibility: hidden;
-  font-family: inherit;
-  color: gray;
-  font-size: inherit;
 }
 </style>
