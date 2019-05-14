@@ -106,7 +106,7 @@ let tests = {
     await t.init()
     await t.initScroll()
     let root = await driver.findElement(By.css(rootSelector))
-    let inputs = await root.findElements({tagName: 'input'})
+    let inputs = await root.findElements(By.css('.ac-input-input'))
     t.changeComment('test stretch (input and delete)', 500)
 
     await t.actions({actions: [

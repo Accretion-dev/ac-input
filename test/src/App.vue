@@ -33,11 +33,13 @@
         </ul>
         <div>
           <p>
-            cursorPos: {{ cursorPos }}
+            <span> cur3: {{ cursors[3] }} </span>
+            <span> cur4: {{ cursors[4] }} </span>
+            <span> cur5: {{ cursors[5] }} </span>
           </p>
-          <ac-input v-model="values[3]" placeholder="value0" @cursor="onCursorChange"/>
-          <ac-input v-model="values[4]" placeholder="value1" @cursor="onCursorChange"/>
-          <ac-input v-model="values[5]" placeholder="value2" @cursor="onCursorChange"/>
+          <ac-input v-model="values[3]" placeholder="value3" :cursor.sync="cursors[3]"/>
+          <ac-input v-model="values[4]" placeholder="value4" :cursor.sync="cursors[4]"/>
+          <ac-input v-model="values[5]" placeholder="value5" :cursor.sync="cursors[5]"/>
           <p>
             <span> value0: "{{values[3]}}" </span>
             <span> value1: "{{values[4]}}" </span>
@@ -64,32 +66,38 @@
           </p>
         </div>
       </test-block>
-      <test-block title="Test pre" name="pre" id="pre">
+      <test-block title="Test highlight" name="highlight" id="hihlight">
         <div>
           <input v-model="cursors[9]" style="width: 30px;"/>
           <button @click="$set(cursors, 9, Number(cursors[9]) - 1)"> - </button>
           <button @click="$set(cursors, 9, Number(cursors[9]) + 1)"> + </button>
         </div>
         <div>
-          start:
-          <input v-model="highlights[9].start" style="width: 30px;"/>
-          <button @click="$set(highlights[9], 'start', Number(highlights[9].start) - 1)"> - </button>
-          <button @click="$set(highlights[9], 'start', Number(highlights[9].start) + 1)"> + </button>
-          end:
-          <input v-model="highlights[9].end" style="width: 30px;"/>
-          <button @click="$set(highlights[9], 'end', Number(highlights[9].end) - 1)"> - </button>
-          <button @click="$set(highlights[9], 'end', Number(highlights[9].end) + 1)"> + </button>
+          <span>
+            start:
+            <input v-model="highlights[0].start" style="width: 30px;"/>
+            <button @click="$set(highlights[0], 'start', Number(highlights[0].start) - 1)"> - </button>
+            <button @click="$set(highlights[0], 'start', Number(highlights[0].start) + 1)"> + </button>
+            end:
+            <input v-model="highlights[0].end" style="width: 30px;"/>
+            <button @click="$set(highlights[0], 'end', Number(highlights[0].end) - 1)"> - </button>
+            <button @click="$set(highlights[0], 'end', Number(highlights[0].end) + 1)"> + </button>
+          </span>
+          <span>
+            start:
+            <input v-model="highlights[1].start" style="width: 30px;"/>
+            <button @click="$set(highlights[1], 'start', Number(highlights[1].start) - 1)"> - </button>
+            <button @click="$set(highlights[1], 'start', Number(highlights[1].start) + 1)"> + </button>
+            end:
+            <input v-model="highlights[1].end" style="width: 30px;"/>
+            <button @click="$set(highlights[1], 'end', Number(highlights[1].end) - 1)"> - </button>
+            <button @click="$set(highlights[1], 'end', Number(highlights[1].end) + 1)"> + </button>
+          </span>
         </div>
         <div>
-          <ac-input v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]" :highlights="[highlights[9]]" :focusSelectAllText="true"/>
+          <ac-input v-model="values[9]" placeholder="value-pre" ref='input9' :cursor.sync="cursors[9]" :highlights="[highlights[0], highlights[1]]"/>
           <p>
             <span> value: "{{values[9]}}" </span>
-          </p>
-        </div>
-        <div>
-          <ac-input v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[10]"/>
-          <p>
-            <span> value: "{{values[10]}}" </span>
           </p>
         </div>
       </test-block>
@@ -125,7 +133,7 @@ export default {
     return {
       values:  [...Array(20).keys()].map(_ => ''),
       cursors: [...Array(20).keys()].map(_ => 0),
-      highlights: [...Array(20).keys()].map((_,index) => ({start:0, end:0, color: 'rgba(0,255,0,0.5)', message:`index:${index}`})),
+      highlights: [...Array(20).keys()].map((_,index) => ({start:0, end:17, color: 'rgba(0,255,0,0.5)', message:`index:${index}`})),
       cursorPos: 0,
       matchStr: '',
       datas: [
@@ -156,6 +164,9 @@ export default {
   },
   created () {
     this.values[9] = '0123456789\n0123456789\n0123456789\n'
+    this.highlights[1].start = 14
+    this.highlights[1].end = 25
+    this.highlights[1].color = 'rgba(255,255,0,0.5)'
   }
 }
 </script>

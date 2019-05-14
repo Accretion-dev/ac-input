@@ -1,10 +1,16 @@
 <template>
-  <span :class="{[`${prefixCls}`]: true, [`${prefixCls}-disabled`]: disabled}">
+  <span :class="{[`${prefixCls}`]: true, [`${prefixCls}-disabled`]: disabled}"
+    @mouseover="mouseOver"
+    @mouseleave="mouseLeave"
+  >
     <pre v-for="({head, middle, tail, color, message}, index) of highlightsData"
-         :key="index"
          ref="highlights"
+         :key="index"
+         :title="message"
          :class="`${prefixCls}-highlight-root`"
-    >{{ head }}<span :title="message" :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
+         @click="changeMessage(1)"
+         @contextmenu.prevent="changeMessage(-1)"
+    >{{ head }}<span :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
     <pre
       ref="placeholder"
       :class="`${prefixCls}-placeholder`"
@@ -49,19 +55,23 @@ export default {
     highlights: {type: Array, default: _ => ([])},
     focusSelectAllText: { type: Boolean, default: false},
     droppable: { type: Boolean, default: true},
-    getCursorDelay: { type: Number, default: 5}
+    getCursorDelay: { type: Number, default: 5},
+    showMessageDelay: { type: Number, default: 3000},
   },
   data () {
     return {
       prefixCls,
       status: {
-        drop: false
+        drop: false,
+        showMessage: false,
+        showMessageIndex: 0,
       },
       offset: 0,
       line: 0,
       column: 0,
       timer: {
-        cursor: null
+        cursor: null,
+        showMessage: null,
       },
       inputObs: null
     }
@@ -90,6 +100,55 @@ export default {
     this.$watch('cursor', this.onCursorChange)
   },
   methods: {
+    changeMessage(delta) {
+      this.showMessage(this.status.showMessageIndex + delta)
+    },
+    mouseLeave(event) {
+      console.log('leave')
+      if (this.timer.showMessage !== null) {
+        clearTimeout(this.timer.showMessage)
+      }
+      this.timer.showMessage = null
+      if (this.status.showMessage) {
+        this.showMessage(null)
+      }
+      this.status.showMessageIndex = 0
+    },
+    mouseOver(event) {
+      if (this.timer.showMessage !== null) {
+        clearTimeout(this.timer.showMessage)
+      }
+      this.timer.showMessage = setTimeout(()=>{
+        this.showMessage(0)
+      }, this.showMessageDelay)
+    },
+    showMessage(state) {
+      if (state!==null) {
+        if (this.$refs.highlights) {
+          let len = this.$refs.highlights.length
+          if (state<0) {
+            state += 10*len
+          }
+          this.status.showMessageIndex = state % len
+          for (let each of this.$refs.highlights) {
+            each.style['pointer-events'] = 'none'
+            each.style.removeProperty('z-index')
+          }
+          let each = this.$refs.highlights[this.status.showMessageIndex]
+          each.style['pointer-events'] = 'all'
+          each.style['z-index'] = 999
+          this.status.showMessage = true
+        }
+      } else {
+        if (this.$refs.highlights) {
+          for (let each of this.$refs.highlights) {
+            each.style['pointer-events'] = 'none'
+            each.style.removeProperty('z-index')
+          }
+          this.status.showMessage = false
+        }
+      }
+    },
     setCursor (cursor) {
       console.log(`set cursor to`, cursor)
       let line = 1
