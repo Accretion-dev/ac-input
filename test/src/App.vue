@@ -74,6 +74,12 @@
             <span> value: "{{values[9]}}" </span>
           </p>
         </div>
+        <div>
+          <ac-input-pre v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[10]"/>
+          <p>
+            <span> value: "{{values[10]}}" </span>
+          </p>
+        </div>
       </test-block>
     </test-env>
   </div>

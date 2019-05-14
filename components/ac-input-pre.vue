@@ -13,7 +13,7 @@
       @blur="onBlur($event)"
       @input="input"
       @click="getCursor"
-    >{{ value }}</pre>
+    ></pre>
   </span>
 </template>
 <script>
@@ -51,6 +51,7 @@ export default {
       line: 0,
       column: 0,
       timer: {},
+      inputObs: null
     }
   },
   computed: {
@@ -58,7 +59,6 @@ export default {
   created () {
   },
   mounted () {
-    this.dropdownObj = this.$children[0]
     this.onSizeChange(this.rootSize)
     this.$watch('size', this.onSizeChange)
     this.onValueChange(this.value, '')
@@ -141,42 +141,31 @@ export default {
       sel.addRange(range)
       this.getCursor()
     },
-    countCursor(node, nodes, data) {
-      for (let thenode of nodes.childNodes) {
-        if (thenode === node) {
-          data.column = data.lastoffset
-          data.offset += data.column
-          return false
-        }
-        if (thenode.nodeType === 3) { // text
-          data.offset += thenode.data.length
-        } else if (thenode.tagName === 'DIV') {
-          data.line += 1
-          data.offset += 1
-          let good = this.countCursor(node, thenode, data)
-          if (!good) return false
-        } else if (thenode.tagName === 'BR') {
-          if (nodes.childNodes.length===1) {
-            return true
-          }
-          data.line += 1
-          data.offset += 1
-        }
-      }
-      return true
-    },
     getCursor () {
       let sel = window.getSelection()
       let node = sel.focusNode
       window.sel = sel
-      let data = {
-        line:1,
-        offset:0,
-        column:0,
-        lastoffset: sel.focusOffset,
+      let line = 1
+      let offset = 0
+      let column = 0
+      let maxLength = this.$refs.input.childNodes.length
+      if (node === this.$refs.input) {
+        maxLength = sel.focusOffset
       }
-      this.countCursor(node, this.$refs.input, data)
-      let {line, column, offset} = data
+      let nodes = Array.from(this.$refs.input.childNodes)
+      for (let thenode of nodes.slice(0,maxLength)) {
+        if (thenode === node) {
+          column = sel.focusOffset
+          offset += column
+          break
+        }
+        if (thenode.nodeType === 3) { // text
+          offset += thenode.data.length
+        } else if (thenode.tagName === 'BR') {
+          line += 1
+          offset += 1
+        }
+      }
       this.line = line
       this.column = column
       if (this.cursor !== offset) {
@@ -186,7 +175,6 @@ export default {
       console.log({line, column, offset})
     },
     onCursorChange (newValue, oldValue) {
-      console.log({newValue, oldValue, offset: this.offset})
       if (newValue !== this.offset) {
         this.setCursor(newValue)
       }
@@ -197,9 +185,9 @@ export default {
       this.$el.style.height = el.height + 'px'
     },
     onValueChange (newValue, oldValue) {
-      if (this.$refs.input.innerText!==newValue) {
-        console.log(this.$refs.input.innerText, newValue, oldValue)
+      if (this.$refs.input.innerText.trim()!==newValue.trim()) {
         this.$refs.input.innerText = newValue
+        this.getCursor()
       }
       if (!newValue) {
         this.$refs.placeholder.style.removeProperty('visibility')
@@ -243,8 +231,66 @@ export default {
     },
     Enter (event) {
       if (event.ctrlKey) {
-        //document.execCommand('insertHtml', false, '<br>')
-        document.execCommand('insertText', false, '\n')
+        let sel = window.getSelection()
+        let node = sel.baseNode
+        let offset = sel.baseOffset
+        if (node === this.$refs.input) {
+          let nodes = Array.from(this.$refs.input.childNodes)
+          node = nodes[offset]
+          let next = nodes[offset+1]
+          if (node.tagName==='BR' && !next) {
+            document.execCommand('insertHtml', false, '<br><br>')
+          } else if (node.tagName==='BR' && (next && next.tagName==='BR')) {
+            document.execCommand('insertHtml', false, '<br><br>')
+            this.$nextTick(() => { // move cursor back
+              let range = document.createRange()
+              let sel = window.getSelection()
+              range.setStart(this.$refs.input, offset+1)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+            })
+          } else if (node.tagName==='BR' && (next && next.tagName!=='BR')){
+            document.execCommand('insertHtml', false, '<br><br>')
+            this.$nextTick(() => { // move cursor back
+              let range = document.createRange()
+              let sel = window.getSelection()
+              range.setStart(this.$refs.input, offset+1)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+            })
+          } else {
+            document.execCommand('insertHtml', false, '<br>')
+          }
+        } else if (node.nodeType === 3) {
+          if (offset !== node.data.length) {
+            document.execCommand('insertHtml', false, '<br>') // enter at middle of string
+            return
+          } else { // enter at end of a string
+            let nodes = Array.from(this.$refs.input.childNodes)
+            offset = nodes.findIndex(_ => _===node)
+            let next = nodes[offset+1]
+            let next2 = nodes[offset+2]
+            if (!next || (next.tagName==='BR' && (!next2))) { // end of strin
+              document.execCommand('insertHtml', false, '<br><br>')
+            } else if (next && next.tagName === 'BR') {
+              document.execCommand('insertHtml', false, '<br><br>')
+              this.$nextTick(() => { // move cursor back
+                let range = document.createRange()
+                let sel = window.getSelection()
+                range.setStart(this.$refs.input, offset+2)
+                range.collapse(true)
+                sel.removeAllRanges()
+                sel.addRange(range)
+              })
+            } else {
+              document.execCommand('insertHtml', false, '<br>')
+            }
+          }
+        } else {
+          debugger
+        }
       } else {
         event.preventDefault()
       }
@@ -296,6 +342,10 @@ $fontFamily: 'Courier New';
   padding: 2px;
   padding-right: 3px;
 }
+//.#{$pre}-input:after{
+//  content:'\0200B'
+//}
+
 .#{$pre}-dropdown-wrapper {
   position: relative;
 }
