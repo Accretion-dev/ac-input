@@ -10,7 +10,7 @@
          :class="`${prefixCls}-highlight-root`"
          @click="changeMessage(1)"
          @contextmenu.prevent="changeMessage(-1)"
-    >{{ head }}<span :class="`${prefixCls}-highlight`" :style="{'background-color': color}" ref='highlight'>{{ middle }}</span>{{ tail }}</pre>
+    >{{ head }}<span :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
     <pre v-if="rangeCalculator"
          ref="rangeCalculator"
          :class="`${prefixCls}-rangeCalculator`"
@@ -745,9 +745,11 @@ export default {
           if (!complete) {
             event.preventDefault()
           } else {
+            event.preventDefault()
             if (this.enter) { this.enter(this, event) }
           }
         } else {
+          event.preventDefault()
           if (this.enter) { this.enter(this, event) }
         }
       }

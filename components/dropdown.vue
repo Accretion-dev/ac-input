@@ -49,6 +49,9 @@ export default {
       prefixCls,
       processedData: [],
       selectIndex: -1,
+      flags: {
+        autoSelect: false
+      }
     }
   },
   computed: {
@@ -131,6 +134,14 @@ export default {
     this.$watch('match', this.onChange)
     this.$watch('data', this.onChange)
     this.onChange()
+    this.$watch('goodIndex', value => {
+      if (this.flags.autoSelect) {
+        this.flags.autoSelect = false
+        if (value.length) {
+          this.selectIndex = value[0]
+        }
+      }
+    })
   },
   mounted () {
   },
@@ -277,8 +288,10 @@ export default {
               }
             })
             thisdata = thisdata.filter(_ => _.score>score)
-            thisdata = _.sortBy(thisdata, _ => _.score)
-            thisdata.reverse()
+            if (!eachgroup.noSort) {
+              thisdata = _.sortBy(thisdata, _ => _.score)
+              thisdata.reverse()
+            }
             goodCount += thisdata.length
             if (maxDrop) {
               this.processedData.push(
@@ -320,10 +333,9 @@ export default {
         }
       }
       if (goodCount>0 && this.autoSelect) {
-        this.selectIndex = 1
-      } else {
-        this.selectIndex = -1
+        this.flags.autoSelect = true
       }
+      this.selectIndex = -1
     },
     doStatistic (__) {
       // not use, dev in furture
