@@ -80,8 +80,8 @@ export default {
       let goodIndex = []
       for (let eachgroup of this.processedData) {
         let group = eachgroup.group
-        let data = eachgroup.data
-        if (data&&data.length) {
+        let datas = eachgroup.data
+        if (datas&&datas.length) {
           if (group) {
             items.push({
               show: `${group} (${eachgroup.filteredCount})/(${eachgroup.totalCount})`,
@@ -90,8 +90,12 @@ export default {
             })
             count += 1
           }
-          for (let {value, index} of data) {
-            items.push({show:value, group, index, count})
+          for (let eachdata of datas) {
+            let {data} = eachdata
+            items.push(Object.assign({},
+              eachdata,
+              {show:data, group, count}
+            ))
             goodIndex.push(count)
             count += 1
             itemCount += 1
@@ -156,11 +160,13 @@ export default {
       return false
     },
     complete (index) {
+      let item
       if (index!== undefined) {
-        this.$emit('cosdfmplete', this.items[index].show)
+        item = this.items[index]
       } else {
-        this.$emit('complete', this.items[this.selectIndex].show)
+        item = this.items[this.selectIndex]
       }
+      this.$emit('complete', {completeValue: item.show, offset: item.cursorOffset})
     },
     onClick(event) {
       let target = event.target
@@ -256,6 +262,7 @@ export default {
           }
         }
       } else { // filter with match
+        console.log('match:', this.match)
         this.processedData = []
         for (let eachgroup of this.data) {
           let maxDrop = eachgroup.maxDrop || this.maxDrop

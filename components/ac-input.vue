@@ -10,7 +10,7 @@
          :class="`${prefixCls}-highlight-root`"
          @click="changeMessage(1)"
          @contextmenu.prevent="changeMessage(-1)"
-    >{{ head }}<span :class="`${prefixCls}-highlight`" :style="{'background-color': color}">{{ middle }}</span>{{ tail }}</pre>
+    >{{ head }}<span :class="`${prefixCls}-highlight`" :style="{'background-color': color}" ref='highlight'>{{ middle }}</span>{{ tail }}</pre>
     <pre v-if="rangeCalculator"
          ref="rangeCalculator"
          :class="`${prefixCls}-rangeCalculator`"
@@ -91,6 +91,8 @@ export default {
     pinyin: {type: Boolean, default: true},
     maxDrop: {type: Number, default: 0},
     droptype:{type: String, default:'match'},
+    tab: {type: Function, default:null},
+    enter: {type: Function, default:null},
   },
   data () {
     return {
@@ -115,16 +117,23 @@ export default {
       },
       dropdownObj: null,
       dropSwitch: true,
+      dropdownPosition: {style: ""},
+      updater: {
+        cursor: 1
+      },
     }
   },
   computed: {
     rangeCalculator () {
       if (this.calculateCursorPosition && this.range) {
         let {start, end} = this.range
+        //console.log('range:', {s:this.range.start,e:this.range.end})
+        end += 1
         let string = this.value.replace(/[^\n]/g, ' ')
         let head = string.slice(0,start)
         let middle = string.slice(start,end+1)
         let tail = string.slice(end+1,)
+        //console.log(`${head.length},${middle.length},${tail.length}`)
         return {head, middle, tail}
       } else {
         return null
@@ -135,22 +144,12 @@ export default {
       let inner = []
       if (this.range) {
         if (Array.isArray(this.range)) {
-          inner = this.range.map(this.getHighlightsData)
+          inner = [this.range.map(this.getHighlightsData)]
         } else {
-          inner = this.getHighlightsData(this.range)
+          inner = [this.getHighlightsData(this.range)]
         }
       }
       return [...inner, ...outer]
-    },
-    dropdownPosition () {
-      if (this.calculateCursorPosition && this.range) {
-        let {x,y,width,height} = this.$refs.range.getBoundingClientRect()
-        return {x,y,style:{left:x+'px', top:y+height+'px'}}
-      } else {
-        let x = this.status.width
-        let y = this.status.height
-        return {x,y,style:{left:'0px', top:y+'px'}}
-      }
     },
     dropdownData () {
       if (!this.data) {
@@ -178,7 +177,12 @@ export default {
             })
           }]
       } else {
-        let {data} = this.data
+        let data
+        if (this.parserData) {
+          data = this.parserData
+        } else {
+          data = this.data.data
+        }
         if (!data) {
           throw Error(`should have data: ${this.data}`)
         }
@@ -189,7 +193,7 @@ export default {
           }
           if (_.data) {
             _.data = data.map(_ => {
-              if (typeof(_)!=='object' || !('data' in _)) {
+              if (typeof(_)!=='object' || !('data' in _)) { // data is array of values
                 let type = typeof(_)
                 if (_ instanceof Date) {
                   _ = _.toISOString()
@@ -199,21 +203,21 @@ export default {
                 if (this.pinyin && _.match(CHINESE)) {
                   let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
                   return {
-                    value: _,
+                    data: _,
                     match:[pinyin, _],
                     description:'',
                   }
                 } else {
                   return {
-                    value: _,
+                    data: _,
                     match:_,
                     description:'',
                   }
                 }
-              } else {
-                if (!('match' in _)) _.match = _.value
-                if (this.pinyin && _.value.match(CHINESE)) {
-                  let pinyin = pinyin4js.convertToPinyinString(_.value, '', pinyin4js.WITHOUT_TONE)
+              } else { // data is and obj like {data, }
+                if (!('match' in _)) _.match = _.data
+                if (this.pinyin && _.data.match(CHINESE)) {
+                  let pinyin = pinyin4js.convertToPinyinString(_.data, '', pinyin4js.WITHOUT_TONE)
                   if (typeof(_.match) === 'string') {
                     _.match = [pinyin, _.match]
                   } else {
@@ -236,11 +240,20 @@ export default {
         return defaultFunctions.parser(this.value)
       }
     },
+    parserData () {
+      if (!this.data) return null
+      if (!this.data.parser) return null
+      if (this.matchStrRange.completeData) {
+        return this.matchStrRange.completeData
+      } else {
+        return null
+      }
+    },
     range () {
       return this.matchStrRange.range
     },
     matchStrRange () {
-      let result = this.parser.cursor(this.offsetEnd)
+      let result = this.parser.cursor(this.cursor)
       this.$emit('match', result.extract)
       return result
     },
@@ -257,11 +270,12 @@ export default {
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
   },
   methods: {
-    complete (newValue) {
+    complete (autocomplete) {
       if (this.timer.blur) {
         clearTimeout(this.timer.blur)
       }
-      let {cursor, value} = this.parser.complete(this.offsetEnd, this.value, newValue)
+      let {completeValue, offset} = autocomplete
+      let {cursor, value} = this.parser.complete(this.offsetEnd, this.value, completeValue, offset)
       this.$emit('input', value)
       setTimeout(() => {
         this.setCursor(cursor)
@@ -330,7 +344,6 @@ export default {
       }
     },
     selectAll() {
-      console.log('select all')
       if (this.range) {
         let {start,end} = this.range
         if (start===this.cursorStart && end===this.cursor) {
@@ -490,6 +503,9 @@ export default {
       let sel = window.getSelection()
       let node = sel.focusNode
       let {line, offset, column} = this.getCursorSingle(node, sel.focusOffset)
+      setTimeout(() => {
+        this.updater.cursor += 1
+      },1000)
       if (sel.anchorNode===node && sel.anchorOffset===self.focusOffset) { //
         if (this.cursor !== offset) {
           this.offsetStart = offset
@@ -527,6 +543,20 @@ export default {
       if (newValue !== this.offsetEnd) {
         this.setCursor(newValue)
       }
+      this.$nextTick(() => {
+        let dropdownPosition
+        if (this.range && this.$refs.range) {
+          let {x:px,y:py} = this.$refs.rangeCalculator.getBoundingClientRect()
+          let {x,y,width,height} = this.$refs.range.getBoundingClientRect()
+          //console.log('pos:  ', {s:this.range.start,e:this.range.end, x})
+          dropdownPosition = {style:{left:x-px+'px', top:y-py+height+'px'}}
+        } else {
+          let x = this.status.width
+          let y = this.status.height
+          dropdownPosition = {style:{left:'0px', top:y+'px'}}
+        }
+        this.dropdownPosition = dropdownPosition
+      })
     },
     changeHighlightSize ({width, height}) {
       if (this.$refs.highlights) {
@@ -588,9 +618,51 @@ export default {
             this.selectAll()
           }
           break;
+        case '/': case '"': case "'":
+          this.doubleInput(event.key, event.key, event); break
+        case '[':
+          this.doubleInput(event.key, ']', event); break
+        case '(':
+          this.doubleInput(event.key, ')', event); break
+        case '{':
+          this.doubleInput(event.key, '}', event); break
+        case 'Backspace':
+          this.doubleDelete(event); break
       }
       if (!['Control', 'ModeChange', 'Shift'].includes(event.key)) {
         this.getCursor()
+      }
+    },
+    doubleInput (key,keymatch,event) {
+      let cursor = this.cursor
+      let before = this.value[cursor-1]
+      if (before !== keymatch) {
+        event.preventDefault()
+        let head = this.value.slice(0,cursor)
+        let tail = this.value.slice(cursor)
+        this.$emit('input', `${head}${key}${keymatch}${tail}`)
+        setTimeout(() => {
+          this.$emit('update:cursor', cursor + 1)
+        },0)
+      }
+    },
+    doubleDelete (event) {
+      let cursor = this.cursor
+      let before = this.value[cursor-1]
+      let after  = this.value[cursor]
+      if ( before==='/' && after==='/' ||
+           before==='"' && after==='"' ||
+           before==="'" && after==="'" ||
+           before==="[" && after==="]" ||
+           before==="{" && after==="}" ||
+           before==="(" && after===")" ) {
+        event.preventDefault()
+        let head = this.value.slice(0,cursor-1)
+        let tail = this.value.slice(cursor+1)
+        this.$emit('input', `${head}${tail}`)
+        setTimeout(() => {
+          this.$emit('update:cursor', cursor - 1)
+        },0)
       }
     },
     Tab (event) {
@@ -598,7 +670,11 @@ export default {
         let complete = this.dropdownObj.Tab()
         if (!complete) {
           event.preventDefault()
+        } else {
+          if (this.tab) { this.tab(this) }
         }
+      } else {
+        if (this.tab) { this.tab(this) }
       }
     },
     Enter (event) {
@@ -668,7 +744,11 @@ export default {
           let complete = this.dropdownObj.Enter()
           if (!complete) {
             event.preventDefault()
+          } else {
+            if (this.enter) { this.enter(this) }
           }
+        } else {
+          if (this.enter) { this.enter(this) }
         }
       }
     },
@@ -694,9 +774,9 @@ export default {
       this.status.drop = true
     },
     onBlur (event) {
-      this.timer.blur = setTimeout(() => {
-        this.status.drop = false
-      }, 0)
+      //this.timer.blur = setTimeout(() => {
+      //  this.status.drop = false
+      //}, 0)
     },
     input (event) {
       let value = event.target.innerText

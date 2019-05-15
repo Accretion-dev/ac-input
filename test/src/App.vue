@@ -111,12 +111,17 @@
           </p>
         </div>
       </test-block>
+      <test-block title="Test mongodb" name="mongodb" id="mongodb">
+        <mongodb-input />
+      </test-block>
     </test-env>
+    <div style="height:1000px"> </div>
   </div>
 </template>
 
 <script>
 const {DateTime, Duration} = require('luxon')
+import mongodbInput from './mongodb-input.vue'
 function groupNumber (data) {
   if (data < 100) {
     return ['default']
@@ -139,6 +144,7 @@ function groupDate (data) {
 
 export default {
   name: 'app',
+  components: { mongodbInput },
   data () {
     return {
       values:  [...Array(20).keys()].map(_ => ''),
