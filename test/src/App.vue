@@ -59,7 +59,7 @@
           <ac-input v-model="values[7]" :data="datas.string"       placeholder="string"       :cursor.sync="cursors[7]" @match="matchStr = $event" />
           <ac-input v-model="values[8]" :data="datas.number"       placeholder="number"       :cursor.sync="cursors[8]" @match="matchStr = $event" />
           <ac-input v-model="values[9]" :data="datas.date"         placeholder="date"         :cursor.sync="cursors[9]" @match="matchStr = $event" />
-          <ac-input v-model="values[15]" :data="fulldata"          placeholder="full"         :cursor.sync="cursors[15]" @match="matchStr = $event" :maxDrop="5"/>
+          <ac-input v-model="values[15]" :data="fulldata"          placeholder="full"         :cursor.sync="cursors[15]" @match="matchStr = $event" :max-drop="5"/>
           <p>
             <span> value0: "{{values[6]}}" </span>
             <span> value1: "{{values[7]}}" </span>

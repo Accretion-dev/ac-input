@@ -31,10 +31,10 @@
     ></pre>
     <div :class="{[`${prefixCls}-dropdown-wrapper`]: true}" :style="dropdownPosition.style">
       <dropdown :drop.sync="status.drop"
-                :droppable="this.dropSwitch"
+                :droppable="dropSwitch"
                 :match="matchStrRange.extract"
                 :data="dropdownData"
-                :maxDrop="maxDrop"
+                :max-drop="maxDrop"
                 @complete="complete"
       />
     </div>
@@ -105,10 +105,10 @@ export default {
       offset: 0,
       line: 0,
       column: 0,
-      range: null,
       timer: {
         cursor: null,
         showMessage: null,
+        blur: null,
       },
       dropdownFunctions: {
         extract: null,
@@ -237,10 +237,12 @@ export default {
         return defaultFunctions.parser(this.value)
       }
     },
+    range () {
+      return this.matchStrRange.range
+    },
     matchStrRange () {
       let result = this.parser.cursor(this.offset)
       this.$emit('match', result.extract)
-      this.range = result.range
       return result
     },
   },
@@ -256,8 +258,10 @@ export default {
   },
   methods: {
     complete (newValue) {
+      if (this.timer.blur) {
+        clearTimeout(this.timer.blur)
+      }
       let {cursor, value} = this.parser.complete(this.offset, this.value, newValue)
-      console.log('complete', {cursor, oldCursor: this.offset, value, newValue})
       this.$emit('input', value)
       setTimeout(() => {
         this.setCursor(cursor)
@@ -482,9 +486,11 @@ export default {
       }
     },
     Tab (event) {
-      event.preventDefault()
       if (this.status.drop) {
         let complete = this.dropdownObj.Tab()
+        if (!complete) {
+          event.preventDefault()
+        }
       }
     },
     Enter (event) {
@@ -550,7 +556,12 @@ export default {
           debugger
         }
       } else {
-        event.preventDefault()
+        if (this.status.drop) {
+          let complete = this.dropdownObj.Enter()
+          if (!complete) {
+            event.preventDefault()
+          }
+        }
       }
     },
     navigation (event) {
@@ -574,8 +585,10 @@ export default {
       }
       this.status.drop = true
     },
-    onBlur () {
-      //this.status.drop = false
+    onBlur (event) {
+      this.timer.blur = setTimeout(() => {
+        this.status.drop = false
+      }, 0)
     },
     input (event) {
       let value = event.target.innerText

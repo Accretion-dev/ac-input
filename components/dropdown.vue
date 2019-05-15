@@ -10,14 +10,14 @@
            >
         <div v-for="{show, type, group, index, count} of items"
              v-show="!(type==='group'&&!show)"
-             :index="count"
              :key="count"
+             :index="count"
              :class="{
                [`${prefixCls}-item-group`]: type==='group',
                [`${prefixCls}-item-last`]: type==='last',
                [`${prefixCls}-selected`]: count===selectIndex,
               }"
-             @click.prevent="onClick"
+             @mousedown.prevent="onClick"
              @keydown="keydown"
         >{{ show }}</div>
       </div>
@@ -49,8 +49,6 @@ export default {
       prefixCls,
       processedData: [],
       selectIndex: -1,
-      itemCount: 0,
-      goodIndex: [],
     }
   },
   computed: {
@@ -67,10 +65,19 @@ export default {
       return item.show
     },
     items () {
+      return this.calItem.items
+    },
+    goodIndex () {
+      return this.calItem.goodIndex
+    },
+    itemCount () {
+      return this.calItem.itemCount
+    },
+    calItem () {
       let items = []
       let count = 0
-      this.itemCount = 0
-      this.goodIndex = []
+      let itemCount = 0
+      let goodIndex = []
       for (let eachgroup of this.processedData) {
         let group = eachgroup.group
         let data = eachgroup.data
@@ -85,9 +92,9 @@ export default {
           }
           for (let {value, index} of data) {
             items.push({show:value, group, index, count})
-            this.goodIndex.push(count)
+            goodIndex.push(count)
             count += 1
-            this.itemCount += 1
+            itemCount += 1
           }
           if (eachgroup.cut) {
             items.push({
@@ -113,7 +120,7 @@ export default {
           }
         }
       }
-      return items
+      return {items, goodIndex, itemCount}
     },
   },
   created () {
@@ -125,7 +132,18 @@ export default {
   },
   methods: {
     Tab () {
-      console.log('tab')
+      if (!this.itemCount) {
+        return true
+      } else if (this.value === this.match){
+        return true
+      } else if (this.selectIndex === -1) {
+        this.selectIndex = this.goodIndex[0]
+      } else { // do autoComplete
+        this.complete()
+      }
+      return false
+    },
+    Enter () {
       if (!this.itemCount) {
         return true
       } else if (this.value === this.match){
@@ -149,6 +167,7 @@ export default {
       let index = Number(target.getAttribute('index'))
       let item = this.items[index]
       if (!item || !item.type) {
+        console.log('here')
         this.selectIndex = index
         this.complete()
       }
