@@ -55,11 +55,11 @@
           <p>
             <span> matchStr: {{ matchStr }} </span>
           </p>
-          <ac-input v-model="values[6]" :data="datas.simpleString" placeholder="simpleString" :cursor.sync="cursors[6]" @match="matchStr = $event" />
-          <ac-input v-model="values[7]" :data="datas.string"       placeholder="string"       :cursor.sync="cursors[7]" @match="matchStr = $event" />
-          <ac-input v-model="values[8]" :data="datas.number"       placeholder="number"       :cursor.sync="cursors[8]" @match="matchStr = $event" />
-          <ac-input v-model="values[9]" :data="datas.date"         placeholder="date"         :cursor.sync="cursors[9]" @match="matchStr = $event" />
-          <ac-input v-model="values[15]" :data="fulldata"          placeholder="full"         :cursor.sync="cursors[15]" @match="matchStr = $event" :max-drop="5"/>
+          <ac-input v-model="values[6]" :data="datas.simpleString" placeholder="simpleString" :cursor.sync="cursors[6]"  :cursorStart.sync="cursorStarts[6] "@match="matchStr = $event" />
+          <ac-input v-model="values[7]" :data="datas.string"       placeholder="string"       :cursor.sync="cursors[7]"  :cursorStart.sync="cursorStarts[7] "@match="matchStr = $event" />
+          <ac-input v-model="values[8]" :data="datas.number"       placeholder="number"       :cursor.sync="cursors[8]"  :cursorStart.sync="cursorStarts[8] "@match="matchStr = $event" />
+          <ac-input v-model="values[9]" :data="datas.date"         placeholder="date"         :cursor.sync="cursors[9]"  :cursorStart.sync="cursorStarts[9] "@match="matchStr = $event" />
+          <ac-input v-model="values[15]" :data="fulldata"          placeholder="full"         :cursor.sync="cursors[15]" :cursorStart.sync="cursorStarts[15] "@match="matchStr = $event" :max-drop="5"/>
           <p>
             <span> value0: "{{values[6]}}" </span>
             <span> value1: "{{values[7]}}" </span>
@@ -71,9 +71,16 @@
       </test-block>
       <test-block title="Test highlight" name="highlight" id="hihlight">
         <div>
-          <input v-model="cursors[10]" style="width: 30px;"/>
-          <button @click="$set(cursors, 10, Number(cursors[10]) - 1)"> - </button>
-          <button @click="$set(cursors, 10, Number(cursors[10]) + 1)"> + </button>
+          <span>
+            <input v-model="cursors[10]" style="width: 30px; padding-right:10px;"/>
+            <button @click="$set(cursors, 10, Number(cursors[10]) - 1)"> - </button>
+            <button @click="$set(cursors, 10, Number(cursors[10]) + 1)"> + </button>
+          </span>
+          <span>
+            <input v-model="cursors[11]" style="width: 30px;"/>
+            <button @click="$set(cursors, 11, Number(cursors[11]) - 1)"> - </button>
+            <button @click="$set(cursors, 11, Number(cursors[11]) + 1)"> + </button>
+          </span>
         </div>
         <div>
           <span>
@@ -98,7 +105,7 @@
           </span>
         </div>
         <div>
-          <ac-input v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[10]" :highlights="[highlights[0], highlights[1]]"/>
+          <ac-input v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[11]" :cursor-start.sync="cursors[10]" :highlights="[highlights[0], highlights[1]]"/>
           <p>
             <span> value: "{{values[10]}}" </span>
           </p>
@@ -135,6 +142,7 @@ export default {
   data () {
     return {
       values:  [...Array(20).keys()].map(_ => ''),
+      cursorStarts: [...Array(20).keys()].map(_ => 0),
       cursors: [...Array(20).keys()].map(_ => 0),
       highlights: [...Array(20).keys()].map((_,index) => ({start:0, end:17, color: 'rgba(0,255,0,0.5)', message:`index:${index}`})),
       cursorPos: 0,

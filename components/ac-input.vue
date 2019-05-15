@@ -65,9 +65,8 @@ const defaultFunctions = {
       },
       complete (cursor, oldValue, newValue) {
         return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
-      }
+      },
     }
-
   },
 }
 const CHINESE = /[\u3400-\u9FBF]/
@@ -78,6 +77,7 @@ export default {
   props: {
     // basic for a input
     value: { type: String, default: '' },
+    cursorStart: { type: Number, default: 0 },
     cursor: { type: Number, default: 0 },
     placeholder: { type: [String], default: 'value' },
     disabled: { type: Boolean, default: false },
@@ -85,7 +85,7 @@ export default {
     focusSelectAllText: { type: Boolean, default: false},
     droppable: { type: Boolean, default: true},
     getCursorDelay: { type: Number, default: 5},
-    showMessageDelay: { type: Number, default: 3000},
+    showMessageDelay: { type: Number, default: 0},
     calculateCursorPosition: { type: Boolean, default: true},
     data: {type: [Object, Array], default: _=> ([])},
     pinyin: {type: Boolean, default: true},
@@ -102,9 +102,8 @@ export default {
         width: 0,
         height: 0,
       },
-      offset: 0,
-      line: 0,
-      column: 0,
+      offsetStart: 0,
+      offsetEnd: 0,
       timer: {
         cursor: null,
         showMessage: null,
@@ -241,7 +240,7 @@ export default {
       return this.matchStrRange.range
     },
     matchStrRange () {
-      let result = this.parser.cursor(this.offset)
+      let result = this.parser.cursor(this.offsetEnd)
       this.$emit('match', result.extract)
       return result
     },
@@ -254,6 +253,7 @@ export default {
     this.onValueChange(this.value, '')
     this.$watch('value', this.onValueChange)
     this.$watch('cursor', this.onCursorChange)
+    this.$watch('cursorStart', this.onCursorStartChange)
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
   },
   methods: {
@@ -261,7 +261,7 @@ export default {
       if (this.timer.blur) {
         clearTimeout(this.timer.blur)
       }
-      let {cursor, value} = this.parser.complete(this.offset, this.value, newValue)
+      let {cursor, value} = this.parser.complete(this.offsetEnd, this.value, newValue)
       this.$emit('input', value)
       setTimeout(() => {
         this.setCursor(cursor)
@@ -281,22 +281,26 @@ export default {
       this.showMessage(this.status.showMessageIndex + delta)
     },
     mouseLeave(event) {
-      if (this.timer.showMessage !== null) {
-        clearTimeout(this.timer.showMessage)
+      if (this.showMessageDelay) {
+        if (this.timer.showMessage !== null) {
+          clearTimeout(this.timer.showMessage)
+        }
+        this.timer.showMessage = null
+        if (this.status.showMessage) {
+          this.showMessage(null)
+        }
+        this.status.showMessageIndex = 0
       }
-      this.timer.showMessage = null
-      if (this.status.showMessage) {
-        this.showMessage(null)
-      }
-      this.status.showMessageIndex = 0
     },
     mouseOver(event) {
-      if (this.timer.showMessage !== null) {
-        clearTimeout(this.timer.showMessage)
+      if (this.showMessageDelay) {
+        if (this.timer.showMessage !== null) {
+          clearTimeout(this.timer.showMessage)
+        }
+        this.timer.showMessage = setTimeout(()=>{
+          this.showMessage(0)
+        }, this.showMessageDelay)
       }
-      this.timer.showMessage = setTimeout(()=>{
-        this.showMessage(0)
-      }, this.showMessageDelay)
     },
     showMessage(state) {
       if (state!==null) {
@@ -325,8 +329,84 @@ export default {
         }
       }
     },
+    selectAll() {
+      console.log('select all')
+      if (this.range) {
+        let {start,end} = this.range
+        if (start===this.cursorStart && end===this.cursor) {
+          this.select(0, this.value.length)
+        } else {
+          this.select(start, end)
+        }
+      } else {
+        this.select(0, this.value.length)
+      }
+    },
+    select (start, end) {
+      if (start<0 || end<0 || start>this.value.length || end > this.value.length || start > end) {
+        throw Error(`bad select range, should have: 0<= ${start} <= ${end} <=${this.value.length}-1`)
+      } else {
+        this.$emit('update:cursor', end)
+        this.$emit('update:cursorStart', start)
+      }
+    },
+    selectRange (cursor) {
+      sel = window.getSelection()
+      let {focusOffset, focusNode} = sel
+
+      let line = 1
+      let offset = 0
+      let column = 0
+      let node = null
+      let thisoffset = 0
+      let reset
+
+      if (cursor===0) {
+        node = this.$refs.input
+      } else {
+        let nodes = this.$refs.input
+        for (let index in nodes.childNodes) {
+          let thenode = nodes.childNodes[index]
+          if (thenode.nodeType === 3) { // text
+            if (offset + thenode.data.length >= cursor) { // get position in a text
+              thisoffset = cursor - offset
+              node = thenode
+              offset += thisoffset
+              break
+            } else {
+              offset += thenode.data.length
+            }
+          } else if (thenode.tagName === 'BR') {
+            line += 1
+            offset += 1
+            if (offset === cursor) {
+              if (Number(index) + 1 <= nodes.childNodes.length - 1) { // at start of the next line
+                thisoffset = 0
+                node = nodes.childNodes[Number(index)+1]
+              } else { // at end of previous line
+                this.$emit('update:cursor', offset-1)
+                reset = offset-1
+              }
+              break
+            }
+          }
+        }
+        if (cursor > offset) {
+          this.$emit('update:cursor', offset)
+          reset = offset
+        }
+      }
+      if (reset !== undefined) return
+      let range = document.createRange()
+      let sel = window.getSelection()
+      this.offsetStart = cursor
+      range.setStart(node, thisoffset)
+      range.setEnd(focusNode, focusOffset)
+      sel.removeAllRanges()
+      sel.addRange(range)
+      this.getCursor()
+    },
     setCursor (cursor) {
-      console.log(`set cursor to`, cursor)
       let line = 1
       let offset = 0
       let column = 0
@@ -375,27 +455,25 @@ export default {
       if (reset !== undefined) return
       let range = document.createRange()
       let sel = window.getSelection()
-      this.offset = cursor
+      this.offsetEnd = cursor
       range.setStart(node, thisoffset)
       range.collapse(true)
       sel.removeAllRanges()
       sel.addRange(range)
       this.getCursor()
     },
-    getCursorWrapper () {
-      let sel = window.getSelection()
-      let node = sel.focusNode
+    getCursorSingle (node, inputOffset) {
       let line = 1
       let offset = 0
       let column = 0
       let maxLength = this.$refs.input.childNodes.length
       if (node === this.$refs.input) {
-        maxLength = sel.focusOffset
+        maxLength = inputOffset
       }
       let nodes = Array.from(this.$refs.input.childNodes)
       for (let thenode of nodes.slice(0,maxLength)) {
         if (thenode === node) {
-          column = sel.focusOffset
+          column = inputOffset
           offset += column
           break
         }
@@ -406,14 +484,27 @@ export default {
           offset += 1
         }
       }
-      this.line = line
-      this.column = column
-      if (this.cursor !== offset) {
-        this.offset = offset
+      return {line, offset, column}
+    },
+    getCursorWrapper () {
+      let sel = window.getSelection()
+      let node = sel.focusNode
+      let {line, offset, column} = this.getCursorSingle(node, sel.focusOffset)
+      if (sel.anchorNode===node && sel.anchorOffset===self.focusOffset) { //
+        if (this.cursor !== offset) {
+          this.offsetStart = offset
+          this.offsetEnd = offset
+          this.$emit('update:cursorStart', offset)
+          this.$emit('update:cursor', offset)
+        }
+      } else { // select a area
+        this.offsetEnd = offset
         this.$emit('update:cursor', offset)
+        let {line:sline, offset:soffset, column:scolumn} = this.getCursorSingle(sel.anchorNode, sel.anchorOffset)
+        this.offsetStart = soffset
+        this.$emit('update:cursorStart', soffset)
       }
       //console.log({line, column, offset, node})
-
     },
     getCursor() {
       clearTimeout(this.timer.cursor)
@@ -421,8 +512,19 @@ export default {
         this.getCursorWrapper()
       }, this.getCursorDelay)
     },
+    onCursorStartChange (newValue, oldValue) {
+      if (newValue === this.offsetEnd) {
+        return
+      } else if (newValue<0 || newValue>this.offsetEnd) {
+        this.offsetStart = this.offsetEnd
+        this.$emit('update:cursorStart', this.offsetEnd)
+      } else { // do select
+        this.offsetStart = newValue
+        this.selectRange(newValue)
+      }
+    },
     onCursorChange (newValue, oldValue) {
-      if (newValue !== this.offset) {
+      if (newValue !== this.offsetEnd) {
         this.setCursor(newValue)
       }
     },
@@ -480,6 +582,12 @@ export default {
           this.navigation(event); break;
         case 'Escape':
           this.dropSwitch = !this.dropSwitch; break;
+        case 'a':
+          if (event.ctrlKey) {
+            event.preventDefault()
+            this.selectAll()
+          }
+          break;
       }
       if (!['Control', 'ModeChange', 'Shift'].includes(event.key)) {
         this.getCursor()
