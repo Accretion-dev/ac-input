@@ -57,7 +57,7 @@ function inputParser (value) {
         keyPositions:[]
       }
     }
-    let keyPositions = parser.tracer.keyPositions
+    let keyPositions = parser.tracer.keyPositions.slice(1)
     let state = {}
     return {
       cursor (cursor) {
@@ -104,10 +104,21 @@ export default {
   computed: {
   },
   methods: {
-    tabFunction (vm) {
-      if (vm.parser && vm.parser.keyPositions) {
+    tabFunction (vm, event) {
+      event.preventDefault()
+      if (vm.parser && vm.parser.keyPositions && vm.parser.keyPositions.length) {
+        let k = vm.parser.keyPositions
+        let mod = event.shiftKey
         let cursor = vm.cursor
-
+        let find
+        if (!mod) { // next
+          find = k.find(_ => _.start>cursor)
+          if (!find) find = k[0]
+        } else { // previous
+          find = k.slice().reverse().find(_ => _.end<cursor)
+          if (!find) find = k[k.length-1]
+        }
+        vm.setCursor(find.end)
       }
     }
   },

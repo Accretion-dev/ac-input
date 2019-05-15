@@ -671,10 +671,10 @@ export default {
         if (!complete) {
           event.preventDefault()
         } else {
-          if (this.tab) { this.tab(this) }
+          if (this.tab) { this.tab(this, event) }
         }
       } else {
-        if (this.tab) { this.tab(this) }
+        if (this.tab) { this.tab(this, event) }
       }
     },
     Enter (event) {
@@ -745,10 +745,10 @@ export default {
           if (!complete) {
             event.preventDefault()
           } else {
-            if (this.enter) { this.enter(this) }
+            if (this.enter) { this.enter(this, event) }
           }
         } else {
-          if (this.enter) { this.enter(this) }
+          if (this.enter) { this.enter(this, event) }
         }
       }
     },
