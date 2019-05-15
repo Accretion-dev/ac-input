@@ -29,7 +29,13 @@
       @input="input"
       @click="getCursor"
     ></pre>
-    <div :style="{ position: 'absolute', left:0+'px', top:dropdownPosition.y+'px'}"> dropdown</div>
+    <div :class="{[`${prefixCls}-dropdown-wrapper`]: true}" :style="dropdownPosition.style">
+      <dropdown :drop="status.drop"
+                :match="matchStrRange.extract"
+                :data="dropdownData"
+                :maxDrop="maxDrop"
+      />
+    </div>
   </span>
 </template>
 <script>
@@ -47,6 +53,16 @@ import equal from 'deep-equal'
      * values
      * showValues
 */
+const defaultFunctions = {
+  parser: value => {
+    return cursor => {
+      // extract is for the dropdown to match
+      // range gives the highlights
+      return {extract: value, range: null}
+    }
+  },
+}
+const CHINESE = /[\u3400-\u9FBF]/
 
 export default {
   name: 'ac-input',
@@ -62,7 +78,11 @@ export default {
     droppable: { type: Boolean, default: true},
     getCursorDelay: { type: Number, default: 5},
     showMessageDelay: { type: Number, default: 3000},
-    calculateCursorPosition: { type: Boolean, default: true}
+    calculateCursorPosition: { type: Boolean, default: true},
+    data: {type: [Object, Array], default: _=> ([])},
+    pinyin: {type: Boolean, default: true},
+    maxDrop: {type: Number, default: 0},
+    droptype:{type: String, default:'match'},
   },
   data () {
     return {
@@ -82,6 +102,10 @@ export default {
         cursor: null,
         showMessage: null,
       },
+      dropdownFunctions: {
+        extract: null,
+        range: null,
+      }
     }
   },
   computed: {
@@ -98,16 +122,16 @@ export default {
       }
     },
     highlightsData () {
-      return this.highlights.map(_ => {
-        let {start, end, color, message} = _
-        if (!color) color='yellow'
-        if (!message) message=''
-        let string = this.value.replace(/[^\n]/g, ' ')
-        let head = string.slice(0,start)
-        let middle = string.slice(start,end+1)
-        let tail = string.slice(end+1,)
-        return {head, middle, tail, color, message}
-      })
+      let outer = this.highlights.map(this.getHighlightsData)
+      let inner = []
+      if (this.range) {
+        if (Array.isArray(this.range)) {
+          inner = this.range.map(this.getHighlightsData)
+        } else {
+          inner = this.getHighlightsData(this.range)
+        }
+      }
+      return [...inner, ...outer]
     },
     dropdownPosition () {
       if (this.calculateCursorPosition && this.range) {
@@ -118,6 +142,88 @@ export default {
         let y = this.status.height
         return {x,y,style:{left:'0px', top:y+'px'}}
       }
+    },
+    dropdownData () {
+      if (!this.data) {
+        return []
+      } else if (Array.isArray(this.data)) { // simple data
+        return [{
+            group: 'default',
+            format: 'string',
+            always: false,
+            data:this.data.map(_ => {
+              if (this.pinyin&&_.match(CHINESE)) {
+                let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
+                return {
+                  value: _,
+                  match:[pinyin, _],
+                  description:'',
+                }
+              } else {
+                return {
+                  value: _,
+                  match:_,
+                  description:'',
+                }
+              }
+            })
+          }]
+      } else {
+        let {data} = this.data
+        if (!data) {
+          throw Error(`should have data: ${this.data}`)
+        }
+        data.forEach(_ => {
+          let data = _.data
+          if (!_.format) {
+            _.format = 'string'
+          }
+          _.data = data.map(_ => {
+            if (typeof(_)==='string') {
+              if (this.pinyin && _.match(CHINESE)) {
+                let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
+                return {
+                  value: _,
+                  match:[pinyin, _],
+                  description:'',
+                }
+              } else {
+                return {
+                  value: _,
+                  match:_,
+                  description:'',
+                }
+              }
+            } else {
+              if (!('match' in _)) _.match = _.value
+              if (this.pinyin && _.value.match(CHINESE)) {
+                let pinyin = pinyin4js.convertToPinyinString(_.value, '', pinyin4js.WITHOUT_TONE)
+                if (typeof(_.match) === 'string') {
+                  _.match = [pinyin, _.match]
+                } else {
+                  _.match.push(pinyin)
+                }
+              } else {
+                return _
+              }
+            }
+          })
+        })
+        return data
+      }
+    },
+    parser () {
+      if (typeof(this.data)==='object' && this.data.parser) {
+        return this.data.parser(this.value)
+      } else {
+        return defaultFunctions.parser(this.value)
+      }
+    },
+    matchStrRange () {
+      let result = this.parser(this.offset)
+      this.$emit('match', result.extract)
+      this.range = result.range
+      return result
     },
   },
   created () {
@@ -130,6 +236,16 @@ export default {
     this.$watch('cursor', this.onCursorChange)
   },
   methods: {
+    getHighlightsData (data) {
+      let {start, end, color, message} = data
+      if (!color) color='yellow'
+      if (!message) message=''
+      let string = this.value.replace(/[^\n]/g, ' ')
+      let head = string.slice(0,start)
+      let middle = string.slice(start,end+1)
+      let tail = string.slice(end+1,)
+      return {head, middle, tail, color, message}
+    },
     changeMessage(delta) {
       this.showMessage(this.status.showMessageIndex + delta)
     },
@@ -265,7 +381,8 @@ export default {
         this.offset = offset
         this.$emit('update:cursor', offset)
       }
-      ///console.log({line, column, offset, node})
+      //console.log({line, column, offset, node})
+
     },
     getCursor() {
       clearTimeout(this.timer.cursor)
