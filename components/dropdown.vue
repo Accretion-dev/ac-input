@@ -1,13 +1,25 @@
 <template>
-  <span v-if="drop" :class="{[prefixCls]: true}">
+  <span v-if="droppable && drop"
+        :class="{[prefixCls]: true}"
+        @keydown="keydown"
+  >
     <template v-if="match || alwaysDrop"> <!--show match info-->
-      <div :class="{[`${prefixCls}-wrapper`]: true}">
-        <div v-for="({show, cls, group, index, count}, key) of items"
-             :key="key"
-             :class="{[cls]: true, [`${prefixCls}-selected`]: count===selectIndex}
-        ">
-          {{ show }}
-        </div>
+      <div :class="{[`${prefixCls}-item-wrapper`]: true}"
+           :style="{'max-height':maxHeight}"
+           @keydown="keydown"
+           >
+        <div v-for="{show, type, group, index, count} of items"
+             v-show="!(type==='group'&&!show)"
+             :index="count"
+             :key="count"
+             :class="{
+               [`${prefixCls}-item-group`]: type==='group',
+               [`${prefixCls}-item-last`]: type==='last',
+               [`${prefixCls}-selected`]: count===selectIndex,
+              }"
+             @click.prevent="onClick"
+             @keydown="keydown"
+        >{{ show }}</div>
       </div>
     </template>
   </span>
@@ -24,24 +36,41 @@ export default {
   name: 'ac-input-dropdown',
   props: {
     drop: { type: Boolean, default: false, },
+    droppable: { type: Boolean, default: true, },
     data: { type: Array, default () {return []}, },
     match: { type: String, default: "", },
-    maxDrop: { type: Number, default: "", }
+    maxDrop: { type: Number, default: 0, },
+    height: {type: Number, default: 500},
+    minScore: {type: Number, default: 0.4},
+    autoSelect: {type: Boolean, default: true},
   },
   data () {
     return {
       prefixCls,
       processedData: [],
       selectIndex: -1,
+      itemCount: 0,
+      goodIndex: [],
     }
   },
   computed: {
+    maxHeight () {
+      return this.height + 'px'
+    },
     alwaysDrop () {
       return true
+    },
+    value () {
+      if (!this.itemCount) return null
+      let item = this.items[this.selectIndex]
+      if (!item) return null
+      return item.show
     },
     items () {
       let items = []
       let count = 0
+      this.itemCount = 0
+      this.goodIndex = []
       for (let eachgroup of this.processedData) {
         let group = eachgroup.group
         let data = eachgroup.data
@@ -49,22 +78,21 @@ export default {
           if (group) {
             items.push({
               show: `${group} (${eachgroup.filteredCount})/(${eachgroup.totalCount})`,
-              cls: `${prefixCls}-item-group`,
               count,
               type:'group'
             })
             count += 1
           }
           for (let {value, index} of data) {
-            items.push({show:value, group, cls: `${prefixCls}-item`, index, count})
+            items.push({show:value, group, index, count})
+            this.goodIndex.push(count)
             count += 1
+            this.itemCount += 1
           }
           if (eachgroup.cut) {
             items.push({
               show:`...(${eachgroup.showCount})/(${eachgroup.filteredCount})`,
               group,
-              cls: `${prefixCls}-item`,
-              index,
               count,
               type:'last'
             })
@@ -72,7 +100,15 @@ export default {
           }
         } else { // have no data
           if (eachgroup.always&&group) {
-            items.push({show: group, cls: `${prefixCls}-item-group`, count, type:'group'})
+            if (eachgroup.data) {
+              items.push({
+                show: `${group} (${eachgroup.filteredCount})/(${eachgroup.totalCount})`,
+                count,
+                type:'group'
+              })
+            } else {
+              items.push({show: group, count, type:'group'})
+            }
             count += 1
           }
         }
@@ -83,49 +119,116 @@ export default {
   created () {
     this.$watch('match', this.onChange)
     this.$watch('data', this.onChange)
+    this.onChange()
   },
   mounted () {
   },
   methods: {
-    down () {
-      if (!this.items.length) return
-      this.selectIndex += 1
-      if (this.selectIndex >= this.items.length) this.selectIndex = 0
-      let item = this.items[this.selectIndex]
-      if (item.type) this.selectIndex += 1
+    Tab () {
+      console.log('tab')
+      if (!this.itemCount) {
+        return true
+      } else if (this.value === this.match){
+        return true
+      } else if (this.selectIndex === -1) {
+        this.selectIndex = this.goodIndex[0]
+      } else { // do autoComplete
+        this.complete()
+      }
+      return false
     },
-    up () {
-      if (!this.items.length) return
-      this.selectIndex -= 1
-      if (this.selectIndex < 0) this.selectIndex = this.items.length - 1
-      let item = this.items[this.selectIndex]
-      if (item.type) this.selectIndex -= 1
-      if (this.selectIndex < 0) this.selectIndex = this.items.length - 1
+    complete (index) {
+      if (index!== undefined) {
+        this.$emit('cosdfmplete', this.items[index].show)
+      } else {
+        this.$emit('complete', this.items[this.selectIndex].show)
+      }
     },
-    onMatchChange () {
-      this.selectIndex = -1
+    onClick(event) {
+      let target = event.target
+      let index = Number(target.getAttribute('index'))
+      let item = this.items[index]
+      if (!item || !item.type) {
+        this.selectIndex = index
+        this.complete()
+      }
+    },
+    keydown (event) {
+    },
+    updateScroll() {
+      let query = `.${prefixCls}-item-wrapper>div[index="${this.selectIndex}"]`
+      let el = this.$el.querySelector(query)
+      if (el) {
+        el.scrollIntoViewIfNeeded(true)
+      }
+    },
+    navigation(name) {
+      if (!this.goodIndex.length) return
+      if (name === 'ArrowUp') {
+        let nextIndex = this.selectIndex - 1
+        let nextGoodIndex = this.goodIndex.slice().reverse().find(_ => _<=nextIndex)
+        if (nextGoodIndex === undefined) {
+          nextGoodIndex = this.goodIndex[this.goodIndex.length-1]
+        }
+        this.selectIndex = nextGoodIndex
+        this.updateScroll()
+      } else if (name === 'ArrowDown') {
+        let nextIndex = this.selectIndex + 1
+        let nextGoodIndex = this.goodIndex.find(_ => _>=nextIndex)
+        if (nextGoodIndex === undefined) {
+          nextGoodIndex = this.goodIndex[0]
+        }
+        this.selectIndex = nextGoodIndex
+        this.updateScroll()
+      } else if (name === 'PageUp') {
+        console.log(name)
+      } else if (name === 'PageDown') {
+        console.log(name)
+      }
+    },
+    onChange () {
+      let goodCount = 0
+      if (!this.data || !this.data.length) {
+        this.processedData = []
+        return
+      }
       if (!this.match) { // show all
         this.processedData = []
         for (let eachgroup of this.data) {
           let maxDrop = eachgroup.maxDrop || this.maxDrop
-          if (maxDrop) {
-            this.processedData.push(
-              Object.assign({
-                  totalCount: eachgroup.data.length,
-                  filteredCount:eachgroup.data.length,
-                  showCount: maxDrop,
-                  cut: eachgroup.data.length>maxDrop
-                },
-                eachgroup,
-                {data: eachgroup.data.slice(maxDrop)}
+          let length = eachgroup.data?eachgroup.data.length:0
+          if (eachgroup.data) {
+            goodCount += eachgroup.data.length
+            if (maxDrop) {
+              this.processedData.push(
+                Object.assign({
+                    totalCount: length,
+                    filteredCount:length,
+                    showCount: maxDrop,
+                    cut: length>maxDrop
+                  },
+                  eachgroup,
+                  {data: eachgroup.data.slice(0,maxDrop)}
+                )
               )
-            )
+            } else {
+              this.processedData.push(
+                Object.assign({
+                    totalCount: length,
+                    filteredCount:length,
+                    showCount: length,
+                    cut: false,
+                  },
+                  eachgroup,
+                )
+              )
+            }
           } else {
             this.processedData.push(
               Object.assign({
-                  total: eachgroup.data.length,
-                  filteredCount:eachgroup.data.length,
-                  showCount: eachgroup.data.length,
+                  totalCount: 0,
+                  filteredCount:0,
+                  showCount: 0,
                   cut: false,
                 },
                 eachgroup,
@@ -137,44 +240,63 @@ export default {
         this.processedData = []
         for (let eachgroup of this.data) {
           let maxDrop = eachgroup.maxDrop || this.maxDrop
-          let score = eachgroup.score || 0.7
+          let score = eachgroup.score || this.minScore
           let thisdata = eachgroup.data
-          thisdata.forEach(_ => {
-            if (Array.isArray(_.match)) {
-              _.score = _.max(_.match.map(__ => LiquidMetal.score(__, this.match)))
-            } else {
-              _.score = LiquidMetal.score(_, this.match)
-            }
-          })
-          thisdata = thisdata.filter(_ => _.score>score)
-          thisdata = _.sortBy(thisdata, _ => _.score)
-          thisdata.reverse()
-          if (maxDrop) {
-            this.processedData.push(
-              Object.assign({
-                  total: eachgroup.data.length,
-                  filteredCount:thisdata.length,
-                  showCount: maxDrop,
-                  cut: thisdata.length > maxDrop
-                },
-                eachgroup,
-                {data: thisdata.slice(maxDrop)}
+          if (thisdata) {
+            thisdata.forEach(data => {
+              if (Array.isArray(data.match)) {
+                data.score = _.max(data.match.map(__ => LiquidMetal.score(__, this.match)))
+              } else {
+                data.score = LiquidMetal.score(data.match, this.match)
+              }
+            })
+            thisdata = thisdata.filter(_ => _.score>score)
+            thisdata = _.sortBy(thisdata, _ => _.score)
+            thisdata.reverse()
+            goodCount += thisdata.length
+            if (maxDrop) {
+              this.processedData.push(
+                Object.assign({
+                    totalCount: eachgroup.data.length,
+                    filteredCount:thisdata.length,
+                    showCount: maxDrop,
+                    cut: thisdata.length > maxDrop
+                  },
+                  eachgroup,
+                  {data: thisdata.slice(0,maxDrop)}
+                )
               )
-            )
+            } else {
+              this.processedData.push(
+                Object.assign({
+                    totalCount: eachgroup.data.length,
+                    filteredCount:thisdata.length,
+                    showCount: thisdata.length,
+                    cut: false,
+                  },
+                  eachgroup,
+                  {data: thisdata}
+                )
+              )
+            }
           } else {
             this.processedData.push(
               Object.assign({
-                  total: eachgroup.data.length,
-                  filteredCount:thisdata.length,
-                  showCount: thisdata.length,
+                  totalCount: 0,
+                  filteredCount:0,
+                  showCount: 0,
                   cut: false,
                 },
                 eachgroup,
-                {data: thisdata}
               )
             )
           }
         }
+      }
+      if (goodCount>0 && this.autoSelect) {
+        this.selectIndex = 1
+      } else {
+        this.selectIndex = -1
       }
     },
     doStatistic (__) {
@@ -217,7 +339,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 $pre: ac-input-dropdown;
 .#{$pre} {
   background-color: #f2f2f2;
@@ -225,19 +347,30 @@ $pre: ac-input-dropdown;
   width: max-content;
 }
 .#{$pre}-item-wrapper {
+  position: relative;
+  z-index: 999;
+  overflow: auto;
+  width: max-content;
 }
 .#{$pre}-item-group {
   font-weight: 600;
-  padding: 0px 3px;
-  border-style: dashed;
   border-width: 1px 1px 0px 1px;
 }
-.#{$pre}-item {
+.#{$pre}-item-last {
+  font-weight: 600;
+  font-size: 80%;
+  border-width: 0px 1px 1px 1px !important;
+}
+.#{$pre}-item-wrapper > div {
   padding: 0px 3px;
   border-style: dashed;
   border-width: 0px 1px;
+  cursor: default;
 }
-.#{$pre}-item:last-child {
+.#{$pre}-item-wrapper > div:hover {
+  background-color: #ddffd5;
+}
+.#{$pre}-item-wrapper:last-child {
   border-width: 0px 1px 1px 1px;
 }
 .#{$pre}-selected {

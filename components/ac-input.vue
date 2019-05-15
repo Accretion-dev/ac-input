@@ -30,10 +30,12 @@
       @click="getCursor"
     ></pre>
     <div :class="{[`${prefixCls}-dropdown-wrapper`]: true}" :style="dropdownPosition.style">
-      <dropdown :drop="status.drop"
+      <dropdown :drop.sync="status.drop"
+                :droppable="this.dropSwitch"
                 :match="matchStrRange.extract"
                 :data="dropdownData"
                 :maxDrop="maxDrop"
+                @complete="complete"
       />
     </div>
   </span>
@@ -55,18 +57,24 @@ import equal from 'deep-equal'
 */
 const defaultFunctions = {
   parser: value => {
-    return cursor => {
-      // extract is for the dropdown to match
-      // range gives the highlights
-      return {extract: value, range: null}
+    return {
+      cursor (cursor) {
+        // extract is for the dropdown to match
+        // range gives the highlights
+        return {extract: value, range: null}
+      },
+      complete (cursor, oldValue, newValue) {
+        return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+      }
     }
+
   },
 }
 const CHINESE = /[\u3400-\u9FBF]/
 
 export default {
   name: 'ac-input',
-  //components: {dropdown},
+  components: {dropdown},
   props: {
     // basic for a input
     value: { type: String, default: '' },
@@ -105,7 +113,9 @@ export default {
       dropdownFunctions: {
         extract: null,
         range: null,
-      }
+      },
+      dropdownObj: null,
+      dropSwitch: true,
     }
   },
   computed: {
@@ -178,36 +188,44 @@ export default {
           if (!_.format) {
             _.format = 'string'
           }
-          _.data = data.map(_ => {
-            if (typeof(_)==='string') {
-              if (this.pinyin && _.match(CHINESE)) {
-                let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
-                return {
-                  value: _,
-                  match:[pinyin, _],
-                  description:'',
-                }
-              } else {
-                return {
-                  value: _,
-                  match:_,
-                  description:'',
-                }
-              }
-            } else {
-              if (!('match' in _)) _.match = _.value
-              if (this.pinyin && _.value.match(CHINESE)) {
-                let pinyin = pinyin4js.convertToPinyinString(_.value, '', pinyin4js.WITHOUT_TONE)
-                if (typeof(_.match) === 'string') {
-                  _.match = [pinyin, _.match]
+          if (_.data) {
+            _.data = data.map(_ => {
+              if (typeof(_)!=='object' || !('data' in _)) {
+                let type = typeof(_)
+                if (_ instanceof Date) {
+                  _ = _.toISOString()
                 } else {
-                  _.match.push(pinyin)
+                  _ = String(_)
+                }
+                if (this.pinyin && _.match(CHINESE)) {
+                  let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
+                  return {
+                    value: _,
+                    match:[pinyin, _],
+                    description:'',
+                  }
+                } else {
+                  return {
+                    value: _,
+                    match:_,
+                    description:'',
+                  }
                 }
               } else {
-                return _
+                if (!('match' in _)) _.match = _.value
+                if (this.pinyin && _.value.match(CHINESE)) {
+                  let pinyin = pinyin4js.convertToPinyinString(_.value, '', pinyin4js.WITHOUT_TONE)
+                  if (typeof(_.match) === 'string') {
+                    _.match = [pinyin, _.match]
+                  } else {
+                    _.match.push(pinyin)
+                  }
+                } else {
+                  return _
+                }
               }
-            }
-          })
+            })
+          }
         })
         return data
       }
@@ -220,7 +238,7 @@ export default {
       }
     },
     matchStrRange () {
-      let result = this.parser(this.offset)
+      let result = this.parser.cursor(this.offset)
       this.$emit('match', result.extract)
       this.range = result.range
       return result
@@ -234,8 +252,17 @@ export default {
     this.onValueChange(this.value, '')
     this.$watch('value', this.onValueChange)
     this.$watch('cursor', this.onCursorChange)
+    this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
   },
   methods: {
+    complete (newValue) {
+      let {cursor, value} = this.parser.complete(this.offset, this.value, newValue)
+      console.log('complete', {cursor, oldCursor: this.offset, value, newValue})
+      this.$emit('input', value)
+      setTimeout(() => {
+        this.setCursor(cursor)
+      })
+    },
     getHighlightsData (data) {
       let {start, end, color, message} = data
       if (!color) color='yellow'
@@ -439,23 +466,26 @@ export default {
         event.preventDefault()
         this.$emit('update:cursor', this.cursor - 1)
         return
-      } else if (event.key === 'f' && event.ctrlKey) {
-        event.preventDefault()
-        this.onFocus()
-        return
       }
       switch (event.key) {
         case 'Tab':
           this.Tab(event); break;
         case 'Enter':
           this.Enter(event); break;
+        case 'ArrowUp': case 'ArrowDown': case 'PageUp': case 'PageDown':
+          this.navigation(event); break;
+        case 'Escape':
+          this.dropSwitch = !this.dropSwitch; break;
       }
       if (!['Control', 'ModeChange', 'Shift'].includes(event.key)) {
         this.getCursor()
       }
     },
     Tab (event) {
-      console.log('tab')
+      event.preventDefault()
+      if (this.status.drop) {
+        let complete = this.dropdownObj.Tab()
+      }
     },
     Enter (event) {
       if (event.ctrlKey) {
@@ -523,6 +553,12 @@ export default {
         event.preventDefault()
       }
     },
+    navigation (event) {
+      if (this.status.drop && this.dropdownObj.itemCount>0) { // move dropdown
+        event.preventDefault()
+        this.dropdownObj.navigation(event.key)
+      }
+    },
     onFocus () {
       if (this.focusSelectAllText) {
         setTimeout(_ => {
@@ -536,8 +572,10 @@ export default {
           }
         },0)
       }
+      this.status.drop = true
     },
     onBlur () {
+      //this.status.drop = false
     },
     input (event) {
       let value = event.target.innerText
@@ -604,5 +642,6 @@ $fontFamily: 'Courier New';
 
 .#{$pre}-dropdown-wrapper {
   position: relative;
+  z-index: 999;
 }
 </style>
