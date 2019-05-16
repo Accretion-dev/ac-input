@@ -157,7 +157,7 @@ let tests = {
     let tab = Key.TAB
     let right = Key.RIGHT
 
-    let actions = [ 500,
+    let actions = [ 10,
       {js: 'window.scrollBy(0,60)'},
       `title`, [Key.DOWN], [Key.TAB], ` `, `haha`, ` `,
       `title:'hehe`, Key.RIGHT, ` && `,

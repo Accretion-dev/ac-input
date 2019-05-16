@@ -344,13 +344,9 @@ export default {
       }
     },
     selectAll() {
-      if (this.range) {
-        let {start,end} = this.range
-        if (start===this.cursorStart && end===this.cursor) {
-          this.select(0, this.value.length)
-        } else {
-          this.select(start, end)
-        }
+      if (this.parser&&this.parser.selectAll) {
+        let {start,end} = this.parser.selectAll(this.cursorStart, this.cursor)
+        this.select(start, end)
       } else {
         this.select(0, this.value.length)
       }
@@ -666,7 +662,7 @@ export default {
       }
     },
     Tab (event) {
-      if (this.status.drop) {
+      if (this.status.drop && !event.shiftKey) {
         let complete = this.dropdownObj.Tab()
         if (!complete) {
           event.preventDefault()

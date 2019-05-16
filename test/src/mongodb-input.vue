@@ -103,14 +103,26 @@ function inputParser (value) {
         keyPositions:[]
       }
     }
-    let keyPositions = parser.tracer.keyPositions.slice(1)
+    let keyPositions = parser.tracer.keyPositions
+    if (keyPositions.length && keyPositions[0].type.startsWith('ws')) {
+      keyPositions = keyPositions.slice(1)
+    }
     let state = {}
     return {
+      selectAll(start, end) {
+        let each
+        for (each of state.selfKeyPositions) {
+          let estart = each.start
+          let eend = each.end
+          if (estart<start || eend<end) break
+        }
+        return {start: each.start, end: each.end}
+      },
       cursor (cursor) {
         let result = parser.analysis(cursor)
         console.log('cursor:', cursor, result)
-        let {start, end, lastEnd, output, complete, string} = result.autocomplete
-        Object.assign(state, {start, end, lastEnd, output, complete, string})
+        let {start, end, lastEnd, output, complete, string, selfKeyPositions} = result.autocomplete
+        Object.assign(state, {start, end, lastEnd, output, complete, string, selfKeyPositions})
         return {
           extract: string,
           range: {start, end: end-1, color: 'rgba(0,255,0,0.5)'},
@@ -162,7 +174,7 @@ export default {
         let cursor = vm.cursor
         let find
         if (!mod) { // next
-          find = k.find(_ => _.start>cursor)
+          find = k.find(_ => _.start>=cursor)
           if (!find) find = k[0]
         } else { // previous
           find = k.slice().reverse().find(_ => _.end<cursor)

@@ -184,7 +184,6 @@ export default {
       let index = Number(target.getAttribute('index'))
       let item = this.items[index]
       if (!item || !item.type) {
-        console.log('here')
         this.selectIndex = index
         this.complete()
       }
@@ -273,7 +272,7 @@ export default {
           }
         }
       } else { // filter with match
-        console.log('match:', this.match)
+        //console.log('match:', this.match)
         this.processedData = []
         for (let eachgroup of this.data) {
           let maxDrop = eachgroup.maxDrop || this.maxDrop
