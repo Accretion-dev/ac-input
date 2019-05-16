@@ -7,6 +7,16 @@
           <li> <p class="test-title"> Test auto stretch: <test-button name="stretch" :running="false"/> </p> </li>
         </ul>
       </test-block>
+      <test-block title="Test simple input" name="simple" id="simple">
+        <div>
+          <div>
+            <ac-input v-model="values[19]" placeholder="value"/>
+          </div>
+          <p>
+            <span> value: "{{values[19]}}" </span>
+          </p>
+        </div>
+      </test-block>
       <test-block title="Test auto stretch" name="stretch" id="stretch">
         <ul>
           <li>The field should auto stretch with change of input content</li>
@@ -14,10 +24,10 @@
         </ul>
         <div>
           <div>
-            <ac-input v-model="values[0]" placeholder="value0" :focusSelectAllText="true"/>
-            <ac-input v-model="values[1]" placeholder="value1" />
-            <ac-input v-model="values[2]" placeholder="value2" :focusSelectAllText="true"/>
-            <ac-input v-model="values[0]" placeholder="disabled" :disabled="true"/>
+            <ac-input-cursor v-model="values[0]" placeholder="value0" :focusSelectAllText="true"/>
+            <ac-input-cursor v-model="values[1]" placeholder="value1" />
+            <ac-input-cursor v-model="values[2]" placeholder="value2" :focusSelectAllText="true"/>
+            <ac-input-cursor v-model="values[0]" placeholder="disabled" :disabled="true"/>
           </div>
           <p>
             <span> value0: "{{values[0]}}" </span>
@@ -37,9 +47,9 @@
             <span> cur4: {{ cursors[4] }} </span>
             <span> cur5: {{ cursors[5] }} </span>
           </p>
-          <ac-input v-model="values[3]" placeholder="value3" :cursor.sync="cursors[3]"/>
-          <ac-input v-model="values[4]" placeholder="value4" :cursor.sync="cursors[4]"/>
-          <ac-input v-model="values[5]" placeholder="value5" :cursor.sync="cursors[5]"/>
+          <ac-input-cursor v-model="values[3]" placeholder="value3" :cursor.sync="cursors[3]"/>
+          <ac-input-cursor v-model="values[4]" placeholder="value4" :cursor.sync="cursors[4]"/>
+          <ac-input-cursor v-model="values[5]" placeholder="value5" :cursor.sync="cursors[5]"/>
           <p>
             <span> value0: "{{values[3]}}" </span>
             <span> value1: "{{values[4]}}" </span>
@@ -55,11 +65,11 @@
           <p>
             <span> matchStr: {{ matchStr }} </span>
           </p>
-          <ac-input v-model="values[6]" :data="datas.simpleString" placeholder="simpleString" :cursor.sync="cursors[6]"  :cursorStart.sync="cursorStarts[6] "@match="matchStr = $event" />
-          <ac-input v-model="values[7]" :data="datas.string"       placeholder="string"       :cursor.sync="cursors[7]"  :cursorStart.sync="cursorStarts[7] "@match="matchStr = $event" />
-          <ac-input v-model="values[8]" :data="datas.number"       placeholder="number"       :cursor.sync="cursors[8]"  :cursorStart.sync="cursorStarts[8] "@match="matchStr = $event" />
-          <ac-input v-model="values[9]" :data="datas.date"         placeholder="date"         :cursor.sync="cursors[9]"  :cursorStart.sync="cursorStarts[9] "@match="matchStr = $event" />
-          <ac-input v-model="values[15]" :data="fulldata"          placeholder="full"         :cursor.sync="cursors[15]" :cursorStart.sync="cursorStarts[15] "@match="matchStr = $event" :max-drop="5"/>
+          <ac-input-cursor v-model="values[6]" :data="datas.simpleString" placeholder="simpleString" :cursor.sync="cursors[6]"  :cursorStart.sync="cursorStarts[6] "@match="matchStr = $event" />
+          <ac-input-cursor v-model="values[7]" :data="datas.string"       placeholder="string"       :cursor.sync="cursors[7]"  :cursorStart.sync="cursorStarts[7] "@match="matchStr = $event" />
+          <ac-input-cursor v-model="values[8]" :data="datas.number"       placeholder="number"       :cursor.sync="cursors[8]"  :cursorStart.sync="cursorStarts[8] "@match="matchStr = $event" />
+          <ac-input-cursor v-model="values[9]" :data="datas.date"         placeholder="date"         :cursor.sync="cursors[9]"  :cursorStart.sync="cursorStarts[9] "@match="matchStr = $event" />
+          <ac-input-cursor v-model="values[15]" :data="fulldata"          placeholder="full"         :cursor.sync="cursors[15]" :cursorStart.sync="cursorStarts[15] "@match="matchStr = $event" :max-drop="5"/>
           <p>
             <span> value0: "{{values[6]}}" </span>
             <span> value1: "{{values[7]}}" </span>
@@ -105,7 +115,7 @@
           </span>
         </div>
         <div>
-          <ac-input v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[11]" :cursor-start.sync="cursors[10]" :highlights="[highlights[0], highlights[1]]"/>
+          <ac-input-cursor v-model="values[10]" placeholder="value-pre" ref='input10' :cursor.sync="cursors[11]" :cursor-start.sync="cursors[10]" :highlights="[highlights[0], highlights[1]]"/>
           <p>
             <span> value: "{{values[10]}}" </span>
           </p>

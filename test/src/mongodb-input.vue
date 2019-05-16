@@ -3,7 +3,7 @@
     <div>
       {{cursorStart}} {{"=>"}} {{cursor}}
     </div>
-    <ac-input v-model="value"
+    <ac-input-cursor v-model="value"
               placeholder="query"
               ref='query'
               :cursor.sync="cursor"
@@ -88,10 +88,12 @@ function inputParser (value) {
     }
   } else { // use parser
     let result
+    let error
     try {
       result = parser.parse({content: value})
     } catch (e) {
-      console.error(e)
+      error = e
+      //console.error(e)
       return {
         cursor (cursor) {
           return {extract: value, range: null}
@@ -100,7 +102,8 @@ function inputParser (value) {
           return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
         },
         result:null,
-        keyPositions:[]
+        keyPositions:[],
+        error,
       }
     }
     let keyPositions = parser.tracer.keyPositions
@@ -120,7 +123,7 @@ function inputParser (value) {
       },
       cursor (cursor) {
         let result = parser.analysis(cursor)
-        console.log('cursor:', cursor, result)
+        // console.log('cursor:', cursor, result)
         let {start, end, lastEnd, output, complete, string, selfKeyPositions} = result.autocomplete
         Object.assign(state, {start, end, lastEnd, output, complete, string, selfKeyPositions})
         return {

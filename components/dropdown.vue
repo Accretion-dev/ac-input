@@ -37,6 +37,7 @@ export default {
   props: {
     drop: { type: Boolean, default: false, },
     droppable: { type: Boolean, default: true, },
+    droptype: {type: String, default: 'normal'},
     data: { type: Array, default () {return []}, },
     match: { type: String, default: "", },
     maxDrop: { type: Number, default: 0, },
@@ -148,27 +149,31 @@ export default {
   methods: {
     Tab () {
       if (!this.itemCount) {
-        return true
+        return false
       } else if (this.value === this.match){
-        return true
+        return false
       } else if (this.selectIndex === -1) {
         this.selectIndex = this.goodIndex[0]
       } else { // do autoComplete
         this.complete()
       }
-      return false
+      return true
     },
     Enter () {
       if (!this.itemCount) {
-        return true
+        return false
       } else if (this.value === this.match){
-        return true
+        return false
       } else if (this.selectIndex === -1) {
-        this.selectIndex = this.goodIndex[0]
+        if (this.droptype==='select') {
+          this.selectIndex = this.goodIndex[0]
+        } else {
+          return false
+        }
       } else { // do autoComplete
         this.complete()
       }
-      return false
+      return true
     },
     complete (index) {
       let item
