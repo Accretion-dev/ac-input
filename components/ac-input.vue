@@ -5,17 +5,17 @@
       :highlights="highlights"
       :data="data"
       :placeholder="placeholder"
-      :maxDrop="maxDrop"
+      :max-drop="maxDrop"
       :droptype="droptype"
-      :getCursorDelay="getCursorDelay"
-      :showMessageDelay="showMessageDelay"
+      :get-cursor-delay="getCursorDelay"
+      :show-message-delay="showMessageDelay"
       :droppable="droppable"
-      :focusSelectAllText="focusSelectAllText"
-      :autoSelect="autoSelect"
+      :focus-select-all-text="focusSelectAllText"
+      :auto-select="autoSelect"
       :disabled="disabled"
-      :newLineWithEnter="newLineWithEnter"
+      :new-line-with-enter="newLineWithEnter"
       :pinyin="pinyin"
-      :calculateCursorPosition="calculateCursorPosition"
+      :calculate-cursor-position="calculateCursorPosition"
       :tab="tab"
       :enter="enter"
       @input="input"
@@ -63,12 +63,6 @@ export default {
     outervalue (value) {
       this.value = value
     }
-  },
-  computed: {
-  },
-  created () {
-  },
-  mounted () {
   },
   methods: {
     input (value) {

@@ -41,7 +41,7 @@
                 :data="dropdownData"
                 :droptype="droptype"
                 :max-drop="maxDrop"
-                :autoSelect="autoSelect"
+                :auto-select="autoSelect"
                 @complete="complete"
       />
     </div>
