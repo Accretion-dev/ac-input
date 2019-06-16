@@ -1,9 +1,9 @@
 <template>
   <span>
     <ac-input-cursor
-      v-model="value"
+      v-model="innerValue"
       :highlights="highlights"
-      :data="data"
+      :data="processedData"
       :placeholder="placeholder"
       :max-drop="maxDrop"
       :droptype="droptype"
@@ -18,7 +18,7 @@
       :calculate-cursor-position="calculateCursorPosition"
       :tab="tab"
       :enter="enter"
-      @input="input"
+      @parserUpdate="onparser"
     />
   </span>
 </template>
@@ -29,7 +29,7 @@ export default {
   name: 'ac-input-simple',
   props: {
     // sync bind values
-    outervalue: { type: String, default: '' },
+    value: { type: String, default: '' },
     // data
     highlights: {type: Array, default: _ => ([])},
     data: {type: [Object, Array], default: _=> ([])},
@@ -50,20 +50,75 @@ export default {
     // outer function
     tab: {type: Function, default:null},
     enter: {type: Function, default:null},
+    // Validate
+    validator: {type: Function, default: null},
+    reportDelay: {type: Number, default: 0},
   },
   data () {
     return {
-      value: "",
+      innerValue: "",
+      lastGoodValue: "",
+      timers: {
+        retport: null
+      }
+    }
+  },
+  computed: {
+    parser () {
+      let validator = this.validator
+      let result = (value) => {
+        let result = {
+          cursor (cursor) {
+            return {extract: value, range: null}
+          },
+          complete (cursor, oldValue, newValue) {
+            return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+          },
+        }
+        if (validator) {
+          let error = validator(value)
+          if (error) {
+            result.error = new Error(error)
+          }
+        }
+        return result
+      }
+      return result
+    },
+    processedData () {
+      let result
+      if (Array.isArray(this.data)) {
+        result = {
+          parser: this.parser,
+          data: this.data,
+        }
+      } else {
+        result = Object.assign({}, {parser: this.parser}, this.data)
+      }
+      return result
     }
   },
   watch: {
-    outervalue (value) {
-      this.value = value
+    value (value, oldValue) {
+      if (value !== oldValue) {
+        this.innerValue = value
+      }
     }
   },
+  created () {
+    this.innerValue = this.value
+  },
   methods: {
-    input (value) {
-      this.$emit('input', value)
+    onparser ({value, parser, data}) {
+      clearTimeout(this.timers.report)
+      this.timers.report = setTimeout(() => {
+        if (!parser.error) {
+          if (this.lastGoodValue !== value) {
+            this.lastGoodValue = value
+            this.$emit('input', value)
+          }
+        }
+      }, this.reportDelay)
     }
   }
 }

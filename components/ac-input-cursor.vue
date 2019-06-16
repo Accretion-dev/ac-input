@@ -241,11 +241,14 @@ export default {
       }
     },
     parser () {
+      let result
       if (typeof(this.data)==='object' && this.data.parser) {
-        return this.data.parser(this.value)
+        result = this.data.parser(this.value)
       } else {
-        return defaultFunctions.parser(this.value)
+        result = defaultFunctions.parser(this.value)
       }
+      this.$emit('parserUpdate', {value: this.value, parser: result, data:this.data})
+      return result
     },
     parserData () {
       if (!this.data) return null

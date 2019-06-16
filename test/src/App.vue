@@ -17,6 +17,22 @@
           </p>
         </div>
       </test-block>
+      <test-block title="Test simple input with validator" name="simple-validator" id="simple-validator">
+        <div>
+          <div>
+            <ac-input
+              v-model="values[18]"
+              placeholder="number 0~50"
+              :focus-select-all-text="true"
+              :reportDelay="200"
+              :validator="value => (value&&(Number(value)>=0 && Number(value)<=50))?null:'value should be a number between 0 and 50'"
+            />
+          </div>
+          <p>
+            <span> value: "{{values[18]}}" </span>
+          </p>
+        </div>
+      </test-block>
       <test-block title="Test auto stretch" name="stretch" id="stretch">
         <ul>
           <li>The field should auto stretch with change of input content</li>
@@ -266,6 +282,7 @@ export default {
   },
   created () {
     this.values[10] = '0123456789\n0123456789\n0123456789\n'
+    this.values[18] = '0'
     this.highlights[1].start = 14
     this.highlights[1].end = 25
     this.highlights[1].color = 'rgba(255,255,0,0.5)'
