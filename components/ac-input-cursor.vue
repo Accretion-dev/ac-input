@@ -80,14 +80,14 @@ export default {
     cursorStart: { type: Number, default: 0 },
     cursor: { type: Number, default: 0 },
     // data
-    highlights: {type: Array, default: _ => ([])},
+    highlights: {type: Array, default: _ => ([])}, // e.g. [{start, end, color}]
     data: {type: [Object, Array], default: _=> ([])},
     // properties
     placeholder: { type: [String], default: 'value' },
     maxDrop: {type: Number, default: 0},
     droptype: {type: String, default: 'normal'},
     // timeouts and time delays
-    getCursorDelay: { type: Number, default: 5},
+    getCursorDelay: { type: [Number, null], default: 5}, // set null to turn off
     showMessageDelay: { type: Number, default: 0},
     // some switchers
     droppable: { type: Boolean, default: true},
@@ -124,7 +124,7 @@ export default {
       },
       dropdownObj: null,
       dropSwitch: true,
-      dropdownPosition: {style: ""},
+      dropdownPosition: {style: {}},
       updater: {
         cursor: 1
       },
@@ -274,9 +274,13 @@ export default {
     this.$watch('value', this.onValueChange)
     this.$watch('cursor', this.onCursorChange)
     this.$watch('cursorStart', this.onCursorStartChange)
+    this.initMount()
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
   },
   methods: {
+    initMount () {
+      this.onCursorChange(this.cursor)
+    },
     complete (autocomplete) {
       if (this.timer.blur) {
         clearTimeout(this.timer.blur)
@@ -526,6 +530,8 @@ export default {
       //console.log({line, column, offset, node})
     },
     getCursor() {
+      // update cursor and cursorStart
+      if (this.getCursorDelay===null) return
       clearTimeout(this.timer.cursor)
       this.timer.cursor = setTimeout(_ => {
         this.getCursorWrapper()
@@ -816,7 +822,7 @@ export default {
 
 <style lang="scss">
 $pre: ac-input;
-$fontFamily: 'Courier New';
+$fontFamily: "'Courier New', Courier, monospace";
 [contenteditable]:focus {
     outline: 0px solid transparent;
 }
