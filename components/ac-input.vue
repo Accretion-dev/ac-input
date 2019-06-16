@@ -1,26 +1,24 @@
 <template>
-  <span>
-    <ac-input-cursor
-      v-model="innerValue"
-      :highlights="highlights"
-      :data="processedData"
-      :placeholder="placeholder"
-      :max-drop="maxDrop"
-      :droptype="droptype"
-      :get-cursor-delay="null"
-      :show-message-delay="showMessageDelay"
-      :droppable="droppable"
-      :focus-select-all-text="focusSelectAllText"
-      :auto-select="autoSelect"
-      :disabled="disabled"
-      :new-line-with-enter="newLineWithEnter"
-      :pinyin="pinyin"
-      :calculate-cursor-position="calculateCursorPosition"
-      :tab="tab"
-      :enter="enter"
-      @parserUpdate="onparser"
-    />
-  </span>
+  <ac-input-cursor
+  v-model="innerValue"
+  :highlights="highlights"
+  :data="processedData"
+  :placeholder="placeholder"
+  :max-drop="maxDrop"
+  :droptype="droptype"
+  :get-cursor-delay="null"
+  :show-message-delay="showMessageDelay"
+  :droppable="droppable"
+  :focus-select-all-text="focusSelectAllText"
+  :auto-select="autoSelect"
+  :disabled="disabled"
+  :new-line-with-enter="newLineWithEnter"
+  :pinyin="pinyin"
+  :calculate-cursor-position="calculateCursorPosition"
+  :tab="tab"
+  :enter="enter"
+  @parserUpdate="onparser"
+  />
 </template>
 <script>
 
@@ -29,7 +27,8 @@ export default {
   name: 'ac-input-simple',
   props: {
     // sync bind values
-    value: { type: String, default: '' },
+    value: { default: '' },
+    type: { type: String, default: '' },
     // data
     highlights: {type: Array, default: _ => ([])},
     data: {type: [Object, Array], default: _=> ([])},
@@ -101,12 +100,12 @@ export default {
   watch: {
     value (value, oldValue) {
       if (value !== oldValue) {
-        this.innerValue = value
+        this.innerValue = String(value)
       }
     }
   },
   created () {
-    this.innerValue = this.value
+    this.innerValue = String(this.value)
   },
   methods: {
     onparser ({value, parser, data}) {
@@ -115,6 +114,17 @@ export default {
         if (!parser.error) {
           if (this.lastGoodValue !== value) {
             this.lastGoodValue = value
+            if (this.type==='number') {
+              value = Number(value)
+            } else if (this.type === 'boolean') {
+              if (value === 'true' || value === '1') {
+                value = true
+              } else if (value === 'false' || value === '0') {
+                value = false
+              } else {
+                value = Boolean(value)
+              }
+            }
             this.$emit('input', value)
           }
         }
