@@ -7,7 +7,7 @@
       :placeholder="placeholder"
       :max-drop="maxDrop"
       :droptype="droptype"
-      :get-cursor-delay="getCursorDelay"
+      :get-cursor-delay="null"
       :show-message-delay="showMessageDelay"
       :droppable="droppable"
       :focus-select-all-text="focusSelectAllText"
@@ -38,7 +38,6 @@ export default {
     maxDrop: {type: Number, default: 0},
     droptype: {type: String, default: 'normal'},
     // timeouts and time delays
-    getCursorDelay: { type: Number, default: 5},
     showMessageDelay: { type: Number, default: 0},
     // some switchers
     droppable: { type: Boolean, default: true},
@@ -54,8 +53,6 @@ export default {
   },
   data () {
     return {
-      cursorStart: 0,
-      cursor: 0,
       value: "",
     }
   },
