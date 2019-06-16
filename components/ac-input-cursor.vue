@@ -163,20 +163,20 @@ export default {
         return []
       } else if (Array.isArray(this.data)) { // simple data
         return [{
-            group: 'default',
+            group: ' ',
             format: 'string',
             always: false,
             data:this.data.map(_ => {
               if (this.pinyin&&_.match(CHINESE)) {
                 let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
                 return {
-                  value: _,
+                  data: _,
                   match:[pinyin, _],
                   description:'',
                 }
               } else {
                 return {
-                  value: _,
+                  data: _,
                   match:_,
                   description:'',
                 }
