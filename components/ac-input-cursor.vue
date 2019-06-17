@@ -28,7 +28,7 @@
       ref="input"
       :class="`${prefixCls}-input`"
       :contenteditable="!disabled"
-      @keydown="keydown"
+      @keydown.stop="keydown"
       @focus="onFocus($event)"
       @blur="onBlur($event)"
       @input="input"
@@ -64,7 +64,8 @@ const defaultFunctions = {
         return {extract: value, range: null}
       },
       complete (cursor, oldValue, newValue) {
-        return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+        //return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+        return {value: newValue, cursor: newValue.length}
       },
     }
   },
@@ -183,7 +184,7 @@ export default {
               }
             })
           }]
-      } else {
+      } else { // {parser, data}
         let data
         if (this.parserData) {
           data = this.parserData
@@ -193,50 +194,87 @@ export default {
         if (!data) {
           throw Error(`should have data: ${this.data}`)
         }
-        data.forEach(_ => {
-          let data = _.data
-          if (!_.format) {
-            _.format = 'string'
+        if (this.data.simpleType) {
+          let result = {
+            group: ' ',
+            format: this.data.simpleType,
+            always: false,
           }
-          if (_.data) {
-            _.data = data.map(_ => {
-              if (typeof(_)!=='object' || !('data' in _)) { // data is array of values
-                let type = typeof(_)
-                if (_ instanceof Date) {
-                  _ = _.toISOString()
-                } else {
-                  _ = String(_)
+          let thisdata
+          if (this.data.simpleType==='string' || this.data.simpleType==='boolean') {
+            thisdata = data.map(_ => {
+              if (this.pinyin&&_.match(CHINESE)) {
+                let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
+                return {
+                  data: _,
+                  match:[pinyin, _],
+                  description:'',
                 }
-                if (this.pinyin && _.match(CHINESE)) {
-                  let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
-                  return {
-                    data: _,
-                    match:[pinyin, _],
-                    description:'',
-                  }
-                } else {
-                  return {
-                    data: _,
-                    match:_,
-                    description:'',
-                  }
-                }
-              } else { // data is and obj like {data, }
-                if (!('match' in _)) _.match = _.data
-                if (this.pinyin && _.data.match(CHINESE)) {
-                  let pinyin = pinyin4js.convertToPinyinString(_.data, '', pinyin4js.WITHOUT_TONE)
-                  if (typeof(_.match) === 'string') {
-                    _.match = [pinyin, _.match]
-                  } else {
-                    _.match.push(pinyin)
-                  }
-                } else {
-                  return _
+              } else {
+                return {
+                  data: _,
+                  match:_,
+                  description:'',
                 }
               }
             })
+          } else {
+            thisdata = data.map(_ => {
+              return {
+                data: String(_),
+                match: String(_),
+                description:'',
+              }
+            })
           }
-        })
+          result.data = thisdata
+          return [result]
+        } else {
+          data.forEach(_ => {
+            let data = _.data
+            if (!_.format) {
+              _.format = 'string'
+            }
+            if (_.data) {
+              _.data = data.map(_ => {
+                if (typeof(_)!=='object' || !('data' in _)) { // data is array of values
+                  let type = typeof(_)
+                  if (_ instanceof Date) {
+                    _ = _.toISOString()
+                  } else {
+                    _ = String(_)
+                  }
+                  if (this.pinyin && _.match(CHINESE)) {
+                    let pinyin = pinyin4js.convertToPinyinString(_, '', pinyin4js.WITHOUT_TONE)
+                    return {
+                      data: _,
+                      match:[pinyin, _],
+                      description:'',
+                    }
+                  } else {
+                    return {
+                      data: _,
+                      match:_,
+                      description:'',
+                    }
+                  }
+                } else { // data is and obj like {data, }
+                  if (!('match' in _)) _.match = _.data
+                  if (this.pinyin && _.data.match(CHINESE)) {
+                    let pinyin = pinyin4js.convertToPinyinString(_.data, '', pinyin4js.WITHOUT_TONE)
+                    if (typeof(_.match) === 'string') {
+                      _.match = [pinyin, _.match]
+                    } else {
+                      _.match.push(pinyin)
+                    }
+                  } else {
+                    return _
+                  }
+                }
+              })
+            }
+          })
+        }
         return data
       }
     },

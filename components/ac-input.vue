@@ -28,7 +28,7 @@ export default {
   props: {
     // sync bind values
     value: { default: '' },
-    type: { type: String, default: '' },
+    type: { type: String, default: 'string' },
     // data
     highlights: {type: Array, default: _ => ([])},
     data: {type: [Object, Array], default: _=> ([])},
@@ -71,7 +71,7 @@ export default {
             return {extract: value, range: null}
           },
           complete (cursor, oldValue, newValue) {
-            return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+            return {value: newValue, cursor:newValue.length}
           },
         }
         if (validator) {
@@ -87,9 +87,11 @@ export default {
     processedData () {
       let result
       if (Array.isArray(this.data)) {
+        let simpleType
         result = {
           parser: this.parser,
           data: this.data,
+          simpleType: this.type,
         }
       } else {
         result = Object.assign({}, {parser: this.parser}, this.data)
