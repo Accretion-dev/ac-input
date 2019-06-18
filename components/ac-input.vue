@@ -1,23 +1,24 @@
 <template>
   <ac-input-cursor
-  v-model="innerValue"
-  :highlights="highlights"
-  :data="processedData"
-  :placeholder="placeholder"
-  :max-drop="maxDrop"
-  :droptype="droptype"
-  :get-cursor-delay="null"
-  :show-message-delay="showMessageDelay"
-  :droppable="droppable"
-  :focus-select-all-text="focusSelectAllText"
-  :auto-select="autoSelect"
-  :disabled="disabled"
-  :new-line-with-enter="newLineWithEnter"
-  :pinyin="pinyin"
-  :calculate-cursor-position="calculateCursorPosition"
-  :tab="tab"
-  :enter="enter"
-  @parserUpdate="onparser"
+    ref="input"
+    v-model="innerValue"
+    :highlights="highlights"
+    :data="processedData"
+    :placeholder="placeholder"
+    :max-drop="maxDrop"
+    :droptype="droptype"
+    :get-cursor-delay="null"
+    :show-message-delay="showMessageDelay"
+    :droppable="droppable"
+    :focus-select-all-text="focusSelectAllText"
+    :auto-select="autoSelect"
+    :disabled="disabled"
+    :new-line-with-enter="newLineWithEnter"
+    :pinyin="pinyin"
+    :calculate-cursor-position="calculateCursorPosition"
+    :tab="tab"
+    :enter="enter"
+    @parserUpdate="onparser"
   />
 </template>
 <script>
@@ -110,6 +111,12 @@ export default {
     this.innerValue = String(this.value)
   },
   methods: {
+    focus () {
+      this.$refs.input.focus()
+    },
+    blur () {
+      this.$refs.input.blur()
+    },
     onparser ({value, parser, data}) {
       clearTimeout(this.timers.report)
       this.timers.report = setTimeout(() => {

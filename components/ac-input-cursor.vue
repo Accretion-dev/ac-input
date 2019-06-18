@@ -2,9 +2,9 @@
   <span :class="{
       [`${prefixCls}`]: true,
       [`${prefixCls}-disabled`]: disabled,
-      [`${prefixCls}-error`]: parser&&parser.error,
+      [`${prefixCls}-error`]: error,
     }"
-    :title="parser&&parser.error?parser.error.message:''"
+    :title="errorMessarge"
     @mouseover="mouseOver"
     @mouseleave="mouseLeave"
   >
@@ -43,6 +43,7 @@
                 :max-drop="maxDrop"
                 :auto-select="autoSelect"
                 @complete="complete"
+                @match="onmatch"
       />
     </div>
   </span>
@@ -129,9 +130,24 @@ export default {
       updater: {
         cursor: 1
       },
+      dropdownCount: 0,
     }
   },
   computed: {
+    error () {
+      let parserError = this.parser&&this.parser.error
+      let selectError = this.droptype === 'select' && this.dropdownCount === 0
+      return parserError || selectError
+    },
+    errorMessarge () {
+      if (this.parser&&this.parser.error) {
+        return this.parser.error.message
+      } else if (this.droptype === 'select' && this.dropdownData.length === 0) {
+        return 'should select one, not other value'
+      } else {
+        return ""
+      }
+    },
     rangeCalculator () {
       if (this.calculateCursorPosition && this.range) {
         let {start, end} = this.range
@@ -164,7 +180,7 @@ export default {
         return []
       } else if (Array.isArray(this.data)) { // simple data
         return [{
-            group: ' ',
+            group: this.droptype==='select'?'':' ',
             format: 'string',
             always: false,
             data:this.data.map(_ => {
@@ -196,7 +212,7 @@ export default {
         }
         if (this.data.simpleType) {
           let result = {
-            group: ' ',
+            group: this.droptype==='select'?'':' ',
             format: this.data.simpleType,
             always: false,
           }
@@ -309,16 +325,20 @@ export default {
   created () {
   },
   mounted () {
-    this.onSizeChange(this.rootSize)
-    this.$watch('size', this.onSizeChange)
+    //this.onSizeChange(this.rootSize)
+    //this.$watch('size', this.onSizeChange)
     this.onValueChange(this.value, '')
     this.$watch('value', this.onValueChange)
     this.$watch('cursor', this.onCursorChange)
     this.$watch('cursorStart', this.onCursorStartChange)
     this.initMount()
+    this.onSizeChange()
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
   },
   methods: {
+    onmatch ({itemCount, goodIndex}) {
+      this.dropdownCount = itemCount
+    },
     initMount () {
       this.onCursorChange(this.cursor)
     },
@@ -618,22 +638,30 @@ export default {
     },
     onSizeChange () {
       let el = this.$refs.input.getBoundingClientRect()
-      this.$el.style.width  =  el.width + 'px'
-      this.$el.style.height = el.height + 'px'
-      this.status.width = el.width
-      this.status.height = el.height
-      this.changeHighlightSize({width:el.width, height:el.height})
+      if (!(el.width===0 && el.height===0)) {
+        this.$el.style.width  = el.width + 'px'
+        this.$el.style.height = el.height + 'px'
+        this.status.width = el.width
+        this.status.height = el.height
+        this.changeHighlightSize({width:el.width, height:el.height})
+      } else {
+        this.$el.style.width  = `calc(${this.value.length/2}em + 4px)`
+        this.$el.style.height = `calc(1em + 4px)`
+      }
     },
     onValueChange (newValue, oldValue) {
       if (this.$refs.input.innerText!==newValue) {
         this.$refs.input.innerText = newValue
         this.getCursor()
       }
+      let {width, height} = this.$refs.placeholder.getBoundingClientRect()
       if (!newValue) {
         this.$refs.placeholder.style.removeProperty('visibility')
         let {width, height} = this.$refs.placeholder.getBoundingClientRect()
-        this.$refs.input.style.width  = width + 'px'
-        this.$refs.input.style.height = height + 'px'
+        if (!(width===0 && height===0)) {
+          this.$refs.input.style.width  = width + 'px'
+          this.$refs.input.style.height = height + 'px'
+        }
       } else {
         if (!oldValue) {
           this.$refs.placeholder.style.visibility = 'hidden'
@@ -661,6 +689,7 @@ export default {
         case 'ArrowUp': case 'ArrowDown': case 'PageUp': case 'PageDown':
           this.navigation(event); break;
         case 'Escape':
+          if (this.droptype === 'select') return
           this.dropSwitch = !this.dropSwitch; break;
         case 'a':
           if (event.ctrlKey) {
@@ -730,9 +759,14 @@ export default {
     Enter (event) {
       let newline = this.newLineWithEnter && !event.ctrlKey || !this.newLineWithEnter && event.ctrlKey
       let report = !newline
-      if (this.status.drop) {
+      if (this.status.drop&&this.dropSwitch) {
         if (!event.ctrlKey) { // only entry without ctrl can make a select
           let stop = this.dropdownObj.Enter()
+          if (this.droptype === 'select' && this.error) {
+            // no report when have error at select mode
+            event.preventDefault()
+            return
+          }
           if (stop) { // dropdown make an action, do not have other action
             event.preventDefault()
           } else { // dropdown do nothing
@@ -752,6 +786,7 @@ export default {
       }
     },
     report (event) {
+      if (this.error) return
       console.log('report')
       event.preventDefault()
       this.$emit('report', {
@@ -847,6 +882,12 @@ export default {
       this.timer.blur = setTimeout(() => {
         this.status.drop = false
       }, 0)
+    },
+    focus () {
+      this.$refs.input.focus()
+    },
+    blur () {
+      this.$refs.input.blur()
     },
     input (event) {
       let value = event.target.innerText

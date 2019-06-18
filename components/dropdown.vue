@@ -128,6 +128,7 @@ export default {
           }
         }
       }
+      this.$emit('match', {itemCount, goodIndex})
       return {items, goodIndex, itemCount}
     },
   },
@@ -197,9 +198,11 @@ export default {
     },
     updateScroll() {
       let query = `.${prefixCls}-item-wrapper>div[index="${this.selectIndex}"]`
-      let el = this.$el.querySelector(query)
-      if (el) {
-        el.scrollIntoViewIfNeeded(true)
+      if (this.$el.querySelector) {
+        let el = this.$el.querySelector(query)
+        if (el) {
+          el.scrollIntoViewIfNeeded(true)
+        }
       }
     },
     navigation(name) {
