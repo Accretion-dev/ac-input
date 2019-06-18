@@ -787,7 +787,6 @@ export default {
     },
     report (event) {
       if (this.error) return
-      console.log('report')
       event.preventDefault()
       this.$emit('report', {
         value: this.value,

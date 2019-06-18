@@ -19,6 +19,7 @@
     :tab="tab"
     :enter="enter"
     @parserUpdate="onparser"
+    @report="report"
   />
 </template>
 <script>
@@ -111,6 +112,9 @@ export default {
     this.innerValue = String(this.value)
   },
   methods: {
+    report (value) {
+      this.$emit('report', value)
+    },
     focus () {
       this.$refs.input.focus()
     },
