@@ -131,16 +131,19 @@ export default {
         cursor: 1
       },
       dropdownCount: 0,
+      onceError: ""
     }
   },
   computed: {
     error () {
       let parserError = this.parser&&this.parser.error
       let selectError = this.droptype === 'select' && this.dropdownCount === 0
-      return parserError || selectError
+      return parserError || selectError || this.onceError
     },
     errorMessarge () {
-      if (this.parser&&this.parser.error) {
+      if (this.onceError) {
+        return this.onceError
+      } else if (this.parser&&this.parser.error) {
         return this.parser.error.message
       } else if (this.droptype === 'select' && this.dropdownData.length === 0) {
         return 'should select one, not other value'
@@ -336,6 +339,9 @@ export default {
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
   },
   methods: {
+    setError (error) {
+       this.onceError = error
+    },
     onmatch ({itemCount, goodIndex}) {
       this.dropdownCount = itemCount
     },
@@ -568,6 +574,7 @@ export default {
       return {line, offset, column}
     },
     getCursorWrapper () {
+      if (!this.$refs.input) return // this vue components is deleted
       let sel = window.getSelection()
       let node = sel.focusNode
       let {line, offset, column} = this.getCursorSingle(node, sel.focusOffset)
@@ -650,6 +657,9 @@ export default {
       }
     },
     onValueChange (newValue, oldValue) {
+      if (this.onceError) {
+        this.onceError = ""
+      }
       if (this.$refs.input.innerText!==newValue) {
         this.$refs.input.innerText = newValue
         this.getCursor()
@@ -866,6 +876,7 @@ export default {
       if (this.focusSelectAllText) {
         setTimeout(_ => {
           let input = this.$refs.input
+          if (!input) return
           if (input.hasChildNodes()) {
             let range = document.createRange()
             let sel = window.getSelection()
@@ -889,6 +900,9 @@ export default {
       this.$refs.input.blur()
     },
     input (event) {
+      if (this.onceError) {
+        this.onceError = ""
+      }
       let value = event.target.innerText
       // there is a known bug: the value must not be "\n", so if it is '\n', set to ""
       if (value === '\n') {

@@ -7,7 +7,6 @@
     :placeholder="placeholder"
     :max-drop="maxDrop"
     :droptype="droptype"
-    :get-cursor-delay="null"
     :show-message-delay="showMessageDelay"
     :droppable="droppable"
     :focus-select-all-text="focusSelectAllText"
@@ -112,6 +111,9 @@ export default {
     this.innerValue = String(this.value)
   },
   methods: {
+    setError (value) {
+      this.$refs.input.setError(value)
+    },
     report (value) {
       this.$emit('report', value)
     },
