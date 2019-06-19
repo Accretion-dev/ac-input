@@ -17,6 +17,8 @@
     :calculate-cursor-position="calculateCursorPosition"
     :tab="tab"
     :enter="enter"
+    :cursor.sync="cursor"
+    :cursor-start.sync="cursorStart"
     @parserUpdate="onparser"
     @report="report"
   />
@@ -28,6 +30,7 @@ export default {
   name: 'ac-input-simple',
   props: {
     // sync bind values
+    // eslint-disable-next-line
     value: { default: '' },
     type: { type: String, default: 'string' },
     // data
@@ -58,6 +61,8 @@ export default {
     return {
       innerValue: "",
       lastGoodValue: "",
+      cursor: 0,
+      cursorStart: 0,
       timers: {
         retport: null
       }
@@ -72,7 +77,7 @@ export default {
             return {extract: value, range: null}
           },
           complete (cursor, oldValue, newValue) {
-            return {value: newValue, cursor:newValue.length}
+            return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
           },
         }
         if (validator) {

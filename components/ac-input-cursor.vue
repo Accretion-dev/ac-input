@@ -65,8 +65,7 @@ const defaultFunctions = {
         return {extract: value, range: null}
       },
       complete (cursor, oldValue, newValue) {
-        //return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
-        return {value: newValue, cursor: newValue.length}
+        return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
       },
     }
   },
@@ -598,6 +597,7 @@ export default {
       //console.log({line, column, offset, node})
     },
     getCursor() {
+      console.log('fetching cursor')
       // update cursor and cursorStart
       if (this.getCursorDelay===null) return
       clearTimeout(this.timer.cursor)
@@ -724,6 +724,7 @@ export default {
     },
     doubleInput (key,keymatch,event) {
       let cursor = this.cursor
+      console.log('cursor:', cursor)
       let before = this.value[cursor-1]
       if (before !== keymatch) {
         event.preventDefault()
