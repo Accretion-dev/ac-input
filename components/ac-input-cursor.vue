@@ -724,7 +724,6 @@ export default {
     },
     doubleInput (key,keymatch,event) {
       let cursor = this.cursor
-      console.log('cursor:', cursor)
       let before = this.value[cursor-1]
       if (before !== keymatch) {
         event.preventDefault()
