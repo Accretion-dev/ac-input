@@ -71,7 +71,30 @@ const defaultFunctions = {
   },
 }
 const CHINESE = /[\u3400-\u9FBF]/
-
+/* auto complete data examples
+1. data is Array
+2. data is Object: {parser, data}
+  * see defaultFunctions.parser for an example of default parser
+  * example data:
+  1. this.data.simpleType is not undefined, this.data.data is an array of simple values
+    * generate an single group
+  2. this.data.simpleType is undefined, this.data.data is an array of groups
+    * each group is like
+    {
+      group: 'name of the group',
+      format: 'string', // format of this group of datas
+      always: true, // if true, will always show this group title event with no match values in this group'
+      data: [
+        'simpleString',
+        123,
+        {
+          data,
+          match, // can set custom match string for this value
+          description, // show extra description for this match: TODO
+        }
+      ]
+    }
+*/
 export default {
   name: 'ac-input',
   components: {dropdown},
