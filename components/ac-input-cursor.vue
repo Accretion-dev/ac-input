@@ -82,7 +82,7 @@ export default {
     cursor: { type: Number, default: 0 },
     // data
     highlights: {type: Array, default: _ => ([])}, // e.g. [{start, end, color}]
-    data: {type: [Object, Array], default: _=> ([])},
+    data: {type: [Object, Array], default: null},
     // properties
     placeholder: { type: [String], default: 'value' },
     maxDrop: {type: Number, default: 0},
@@ -210,7 +210,7 @@ export default {
           data = this.data.data
         }
         if (!data) {
-          throw Error(`should have data: ${this.data}`)
+          throw Error(`should have data: ${JSON.stringify(this.data,null,2)}`)
         }
         if (this.data.simpleType) {
           let result = {
@@ -298,7 +298,7 @@ export default {
     },
     parser () {
       let result
-      if (typeof(this.data)==='object' && this.data.parser) {
+      if (this.data && typeof(this.data)==='object' && this.data.parser) {
         result = this.data.parser(this.value)
       } else {
         result = defaultFunctions.parser(this.value)
