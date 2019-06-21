@@ -1,6 +1,6 @@
 <template>
   <span v-if="droppable && drop"
-        :class="{[prefixCls]: true}"
+        :class="`${prefixCls}`"
         @keydown="keydown"
   >
     <template v-if="match || alwaysDrop"> <!--show match info-->
@@ -393,7 +393,6 @@ $pre: ac-input-dropdown;
 }
 .#{$pre}-item-wrapper {
   position: relative;
-  z-index: 999;
   overflow: auto;
   width: max-content;
 }

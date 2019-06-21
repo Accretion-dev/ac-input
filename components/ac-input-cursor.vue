@@ -34,7 +34,11 @@
       @input="input"
       @click="getCursor"
     ></pre>
-    <div :class="{[`${prefixCls}-dropdown-wrapper`]: true}" :style="dropdownPosition.style">
+    <div
+      ref="dropdownWrapper"
+      :class="{[`${prefixCls}-dropdown-wrapper`]: true}"
+      :style="dropdownPosition.style"
+    >
       <dropdown :drop.sync="status.drop"
                 :droppable="dropSwitch"
                 :match="matchStrRange.extract"
@@ -349,6 +353,16 @@ export default {
   },
   created () {
   },
+  watch: {
+    'status.drop' (value) {
+      this.updateDropdownPosition()
+      if (value) {
+        this.$refs.dropdownWrapper.style.setProperty('z-index', 9999)
+      } else {
+        this.$refs.dropdownWrapper.style.setProperty('z-index', -1)
+      }
+    }
+  },
   mounted () {
     //this.onSizeChange(this.rootSize)
     //this.$watch('size', this.onSizeChange)
@@ -643,17 +657,21 @@ export default {
       if (newValue !== this.offsetEnd) {
         this.setCursor(newValue)
       }
+      this.updateDropdownPosition()
+    },
+    updateDropdownPosition () {
       this.$nextTick(() => {
         let dropdownPosition
+        let {x:rootx, y:rooty} = this.$el.getBoundingClientRect()
         if (this.range && this.$refs.range) {
           let {x:px,y:py} = this.$refs.rangeCalculator.getBoundingClientRect()
           let {x,y,width,height} = this.$refs.range.getBoundingClientRect()
           //console.log('pos:  ', {s:this.range.start,e:this.range.end, x})
-          dropdownPosition = {style:{left:x-px+'px', top:y-py+height+'px'}}
+          dropdownPosition = {style:{left:rootx+x-px+'px', top:rootx+y-py+height+'px'}}
         } else {
           let x = this.status.width
           let y = this.status.height
-          dropdownPosition = {style:{left:'0px', top:y+'px'}}
+          dropdownPosition = {style:{left:rootx+'px', top:rooty+y+'px'}}
         }
         this.dropdownPosition = dropdownPosition
       })
@@ -988,7 +1006,6 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-highlight {
 }
 .#{$pre}-dropdown-wrapper {
-  position: relative;
-  z-index: 999;
+  position: fixed;
 }
 </style>
