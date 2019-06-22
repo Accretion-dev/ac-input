@@ -34,22 +34,19 @@
       @input="input"
       @click="getCursor"
     ></pre>
-    <div
+    <dropdown
       ref="dropdownWrapper"
-      :class="{[`${prefixCls}-dropdown-wrapper`]: true}"
       :style="dropdownPosition.style"
-    >
-      <dropdown :drop.sync="status.drop"
-                :droppable="dropSwitch"
-                :match="matchStrRange.extract"
-                :data="dropdownData"
-                :droptype="droptype"
-                :max-drop="maxDrop"
-                :auto-select="autoSelect"
-                @complete="complete"
-                @match="onmatch"
-      />
-    </div>
+      :drop.sync="status.drop"
+      :droppable="dropSwitch"
+      :match="matchStrRange.extract"
+      :data="dropdownData"
+      :droptype="droptype"
+      :max-drop="maxDrop"
+      :auto-select="autoSelect"
+      @complete="complete"
+      @match="onmatch"
+    />
   </span>
 </template>
 <script>
@@ -354,14 +351,6 @@ export default {
   created () {
   },
   watch: {
-    'status.drop' (value) {
-      this.updateDropdownPosition()
-      if (value) {
-        this.$refs.dropdownWrapper.style.setProperty('z-index', 9999)
-      } else {
-        this.$refs.dropdownWrapper.style.setProperty('z-index', -1)
-      }
-    }
   },
   mounted () {
     //this.onSizeChange(this.rootSize)
@@ -1004,8 +993,5 @@ $fontFamily: "'Courier New', Courier, monospace";
   pointer-events: none;
 }
 .#{$pre}-highlight {
-}
-.#{$pre}-dropdown-wrapper {
-  position: fixed;
 }
 </style>

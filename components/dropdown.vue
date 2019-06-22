@@ -1,14 +1,17 @@
 <template>
-  <span v-if="droppable && drop"
+  <span v-if="debug||droppable && drop"
         :class="`${prefixCls}`"
         @keydown="keydown"
   >
+    <pre v-if="description" :style="description.style" :class="`${prefixCls}-item-wrapper-description`">{{description.data}}</pre>
     <template v-if="match || alwaysDrop"> <!--show match info-->
-      <div :class="{[`${prefixCls}-item-wrapper`]: true}"
-           :style="{'max-height':maxHeight}"
-           @keydown="keydown"
-           >
-        <div v-for="{show, type, group, index, count} of items"
+      <div
+        ref="items"
+        :class="{[`${prefixCls}-item-wrapper`]: true}"
+        :style="{'max-height':maxHeight}"
+        @keydown="keydown"
+      >
+        <div v-for="{show, type, group, index, count, description} of items"
              v-show="!(type==='group'&&!show)"
              :key="count"
              :index="count"
@@ -19,7 +22,7 @@
               }"
              @mousedown.prevent="onClick"
              @keydown="keydown"
-        >{{ show }}</div>
+        > {{ show }} </div>
       </div>
     </template>
   </span>
@@ -48,14 +51,34 @@ export default {
   data () {
     return {
       prefixCls,
+      debug: false,
       processedData: [],
       selectIndex: -1,
       flags: {
         autoSelect: false
-      }
+      },
+      onChangeCount: 0,
     }
   },
   computed: {
+    description () {
+      this.onChangeCount
+      let data = this.items[this.selectIndex]
+      if (!data||!data.description) {
+        return null
+      } else {
+        let item = this.$refs.items.querySelector(`div[index="${this.selectIndex}"]`)
+        if (!item) return null
+        let {x,y,width} = item.getBoundingClientRect()
+        return {
+          data: data.description,
+          style: {
+            left: x+width+'px',
+            top: y+'px',
+          },
+        }
+      }
+    },
     maxHeight () {
       return this.height + 'px'
     },
@@ -148,6 +171,13 @@ export default {
   mounted () {
   },
   methods: {
+    descriptionPosition (data) {
+      if (!data.description) {
+        return {}
+      } else {
+        return {}
+      }
+    },
     Tab () {
       if (!this.itemCount) {
         return false
@@ -230,6 +260,9 @@ export default {
       }
     },
     onChange () {
+      this.$nextTick(() => {
+        this.onChangeCount += 1
+      })
       let goodCount = 0
       if (!this.data || !this.data.length) {
         this.processedData = []
@@ -388,8 +421,20 @@ export default {
 $pre: ac-input-dropdown;
 .#{$pre} {
   background-color: #f2f2f2;
-  position: absolute;
   width: max-content;
+  position: fixed;
+  z-index: 9999;
+  ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+      background: #f2f2f2;
+      -webkit-border-radius: 1ex;
+  }
+  ::-webkit-scrollbar-corner {
+      background: #f2f2f2;
+  }
 }
 .#{$pre}-item-wrapper {
   position: relative;
@@ -410,6 +455,13 @@ $pre: ac-input-dropdown;
   border-style: dashed;
   border-width: 0px 1px;
   cursor: default;
+}
+.#{$pre}-item-wrapper-description {
+  position: fixed;
+  z-index: 9999;
+  background-color: #ddffd5;
+  margin: 0;
+  padding: 0;
 }
 .#{$pre}-item-wrapper > div:hover {
   background-color: #ddffd5;
