@@ -623,7 +623,6 @@ export default {
       //console.log({line, column, offset, node})
     },
     getCursor() {
-      console.log('fetching cursor')
       // update cursor and cursorStart
       if (this.getCursorDelay===null) return
       clearTimeout(this.timer.cursor)
@@ -655,8 +654,8 @@ export default {
         if (this.range && this.$refs.range) {
           let {x:px,y:py} = this.$refs.rangeCalculator.getBoundingClientRect()
           let {x,y,width,height} = this.$refs.range.getBoundingClientRect()
-          //console.log('pos:  ', {s:this.range.start,e:this.range.end, x})
-          dropdownPosition = {style:{left:rootx+x-px+'px', top:rootx+y-py+height+'px'}}
+          console.log('pos:  ', {x,y,width,height, px, py, rootx, rooty})
+          dropdownPosition = {style:{left:rootx+x-px+'px', top:rooty+y-py+height+'px'}}
         } else {
           let x = this.status.width
           let y = this.status.height
