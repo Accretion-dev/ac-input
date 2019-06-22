@@ -109,7 +109,7 @@ export default {
     data: {type: [Object, Array], default: null},
     // properties
     placeholder: { type: [String], default: 'value' },
-    maxDrop: {type: Number, default: 0},
+    maxDrop: {type: Number, default: 99},
     droptype: {type: String, default: 'normal'},
     // timeouts and time delays
     getCursorDelay: { type: [Number, null], default: 5}, // set null to turn off

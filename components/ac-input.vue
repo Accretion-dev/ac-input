@@ -38,7 +38,7 @@ export default {
     data: {type: [Object, Array], default: _=> ([])},
     // properties
     placeholder: { type: [String], default: 'value' },
-    maxDrop: {type: Number, default: 0},
+    maxDrop: {type: Number, default: 99},
     droptype: {type: String, default: 'normal'},
     // timeouts and time delays
     showMessageDelay: { type: Number, default: 0},
