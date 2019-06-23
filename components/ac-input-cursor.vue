@@ -718,8 +718,10 @@ export default {
     },
     keydown(event) {
       if (this.onkeydown) {
+        let rawEvent = event
         let event = this.onkeydown(event)
         if (!event) return
+        if (!event.preventDefault) event.preventDefault = rawEvent.preventDefault
       }
       if (event.key === '=' && event.ctrlKey) {
         event.preventDefault()
