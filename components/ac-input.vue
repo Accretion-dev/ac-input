@@ -9,6 +9,7 @@
     :droptype="droptype"
     :show-message-delay="showMessageDelay"
     :droppable="droppable"
+    :border="border"
     :focus-select-all-text="focusSelectAllText"
     :auto-select="autoSelect"
     :disabled="disabled"
@@ -40,6 +41,7 @@ export default {
     placeholder: { type: [String], default: 'value' },
     maxDrop: {type: Number, default: 99},
     droptype: {type: String, default: 'normal'},
+    border: {type: Boolean, default: true},
     // timeouts and time delays
     showMessageDelay: { type: Number, default: 0},
     // some switchers

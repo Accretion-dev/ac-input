@@ -3,6 +3,8 @@
       [`${prefixCls}`]: true,
       [`${prefixCls}-disabled`]: disabled,
       [`${prefixCls}-error`]: error,
+      [`${prefixCls}-with-border`]: border,
+      [`${prefixCls}-without-border`]: !border,
     }"
     :title="errorMessarge"
     @mouseover="mouseOver"
@@ -111,6 +113,7 @@ export default {
     placeholder: { type: [String], default: 'value' },
     maxDrop: {type: Number, default: 99},
     droptype: {type: String, default: 'normal'},
+    border: {type: Boolean, default: true},
     // timeouts and time delays
     getCursorDelay: { type: [Number, null], default: 5}, // set null to turn off
     showMessageDelay: { type: Number, default: 0},
@@ -654,7 +657,7 @@ export default {
         if (this.range && this.$refs.range) {
           let {x:px,y:py} = this.$refs.rangeCalculator.getBoundingClientRect()
           let {x,y,width,height} = this.$refs.range.getBoundingClientRect()
-          console.log('pos:  ', {x,y,width,height, px, py, rootx, rooty})
+          //console.log('pos:  ', {x,y,width,height, px, py, rootx, rooty})
           dropdownPosition = {style:{left:rootx+x-px+'px', top:rooty+y-py+height+'px'}}
         } else {
           let x = this.status.width
@@ -954,8 +957,6 @@ $fontFamily: "'Courier New', Courier, monospace";
   font-family: #{$fontFamily};
   position: relative;
   display: inline-block;
-  border-style: solid;
-  border-width: thin;
 }
 .#{$pre}-disabled {
   background-color: #ebebeb;
@@ -963,6 +964,18 @@ $fontFamily: "'Courier New', Courier, monospace";
 }
 .#{$pre}-error {
   border-color: red;
+}
+.#{$pre}-with-border {
+  border-style: solid;
+  border-width: thin;
+}
+.#{$pre}-without-border {
+  border-style: none;
+  border-width: thin;
+}
+.#{$pre}-without-border > pre {
+  padding-left: 0px;
+  padding-right: 0px;
 }
 @mixin ac-input-pre-common {
   font-family: inherit;
@@ -972,7 +985,6 @@ $fontFamily: "'Courier New', Courier, monospace";
   left:0;
   margin: 0px;
   padding: 2px;
-  padding-right: 3px;
 }
 .#{$pre}-placeholder {
   @include ac-input-pre-common;
