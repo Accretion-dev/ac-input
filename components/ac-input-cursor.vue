@@ -131,6 +131,8 @@ export default {
     onkeydown: {type: Function, default:null},
     onfocus: {type: Function, default:null},
     onblur: {type: Function, default:null},
+    oncreated: {type: Function, default:null},
+    onmounted: {type: Function, default:null},
   },
   data () {
     return {
@@ -355,6 +357,9 @@ export default {
     },
   },
   created () {
+    if (this.oncreated) {
+      this.oncreated(this)
+    }
   },
   watch: {
   },
@@ -368,6 +373,9 @@ export default {
     this.initMount()
     this.onSizeChange()
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
+    if (this.onmounted) {
+      this.onmounted(this)
+    }
   },
   methods: {
     setError (error) {
@@ -695,6 +703,7 @@ export default {
       if (this.onceError) {
         this.onceError = ""
       }
+      console.log('onValueChange', JSON.stringify(newValue), JSON.stringify(oldValue))
       if (this.$refs.input.innerText!==newValue) {
         this.$refs.input.innerText = newValue
         this.getCursor()
@@ -979,6 +988,7 @@ export default {
         cursor = this.calculateCursorNumber(cursor)
         this.setCursor(cursor)
       }
+      this.updateDropdownPosition()
     },
     insertString (string, cursor, focus) {
       string = String(string)
@@ -1028,7 +1038,6 @@ export default {
             let cursor = this.value.length-delta
             if (cursor<0) cursor = 0
             if (focus) {
-              console.log('focus on ',cursor)
               this.focus(cursor)
             } else {
               this.setCursor(cursor)
@@ -1042,7 +1051,6 @@ export default {
           let cursor = delta
           if (cursor>this.value.length) cursor = this.value.length
           if (focus) {
-            console.log('focus on ',cursor)
             this.focus(cursor)
           } else {
             this.setCursor(cursor)

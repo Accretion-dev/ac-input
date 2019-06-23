@@ -23,6 +23,8 @@
     :onkeydown="onkeydown"
     :onfocus="onfocus"
     :onblur="onblur"
+    :oncreated="oncreated"
+    :onmounted="onmounted"
     @parserUpdate="onparser"
     @report="report"
     @cursorMove="$emit('cursorMove', $event)"
@@ -62,6 +64,8 @@ export default {
     onkeydown: {type: Function, default:null},
     onfocus: {type: Function, default:null},
     onblur: {type: Function, default:null},
+    oncreated: {type: Function, default:null},
+    onmounted: {type: Function, default:null},
     // Validate
     validator: {type: Function, default: null},
     reportDelay: {type: Number, default: 0},
@@ -125,6 +129,11 @@ export default {
     this.innerValue = String(this.value)
   },
   methods: {
+    insertString (...all) {
+      this.$refs.input.insertString(...all)
+    },
+    deleteString (number, focus, stay) {
+    },
     setError (value) {
       this.$refs.input.setError(value)
     },
