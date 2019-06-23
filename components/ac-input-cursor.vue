@@ -760,6 +760,7 @@ export default {
           if (this.cursor>0) {
             this.doubleDelete(event)
           } else {
+            event.preventDefault()
             this.$emit('cursorMove', {delta: -1, deleting: true, focus: true, key:'Backspace', direction:'left'})
           }
           break;
