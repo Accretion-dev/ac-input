@@ -128,6 +128,9 @@ export default {
     // outer function
     tab: {type: Function, default:null},
     enter: {type: Function, default:null},
+    onkeydown: {type: Function, default:null},
+    onfocus: {type: Function, default:null},
+    onblur: {type: Function, default:null},
   },
   data () {
     return {
@@ -714,6 +717,10 @@ export default {
       this.onSizeChange()
     },
     keydown(event) {
+      if (this.onkeydown) {
+        let event = this.onkeydown(event)
+        if (!event) return
+      }
       if (event.key === '=' && event.ctrlKey) {
         event.preventDefault()
         this.$emit('update:cursor', this.cursor + 1)
@@ -748,7 +755,24 @@ export default {
         case '{':
           this.doubleInput(event.key, '}', event); break
         case 'Backspace':
-          this.doubleDelete(event); break
+          if (this.cursor>0) {
+            this.doubleDelete(event)
+          } else {
+            this.$emit('cursorMove', {delta: -1, deleting: true, focus: true, key:'Backspace', direction:'left'})
+          }
+          break;
+        case 'ArrowLeft':
+          if (this.cursor === 0) {
+            event.preventDefault()
+            this.$emit('cursorMove', {delta: -1, deleting: false, focus: true, key:'ArrowLeft', direction:'left'})
+          }
+          break;
+        case 'ArrowRight':
+          if (this.cursor === this.value.length) {
+            event.preventDefault()
+            this.$emit('cursorMove', {delta: 1, deleting: false, focus: true, key:'ArrowRight', direction:'right'})
+          }
+          break;
       }
       if (!['Control', 'ModeChange', 'Shift'].includes(event.key)) {
         this.getCursor()
@@ -919,14 +943,111 @@ export default {
         },0)
       }
       this.status.drop = true
+      if (this.onfocus) {
+        this.onfocus(this)
+      }
     },
     onBlur (event) {
       this.timer.blur = setTimeout(() => {
         this.status.drop = false
       }, 0)
+      if (this.onblur) {
+        this.onblur(this)
+      }
     },
-    focus () {
+    calculateCursorNumber (cursor) {
+      if (cursor === 'start') {
+        return 0
+      } else if (cursor === 'end') {
+        return this.value.length
+      } else if (typeof(cursor) === 'number') {
+        if (cursor>this.value.length) {
+          return this.value.length
+        } else {
+          return cursor
+        }
+      } else {
+        return this.cursor
+      }
+    },
+    focus (cursor) {
       this.$refs.input.focus()
+      if (cursor!==undefined) {
+        cursor = this.calculateCursorNumber(cursor)
+        this.setCursor(cursor)
+      }
+    },
+    insertString (string, cursor, focus) {
+      string = String(string)
+      cursor = this.calculateCursorNumber(cursor)
+      let head = this.value.slice(0,cursor)
+      let tail = this.value.slice(cursor)
+      let newValue = `${head}${string}${tail}`
+      this.$emit('input', newValue)
+      if (focus) {
+        setTimeout(() => {
+          this.focus(cursor + string.length)
+        })
+      }
+    },
+    deleteString (number, focus, stay) {
+      if (number<=this.value.length) {
+        if (number) {
+          this.$emit('input', this.value.slice(0, this.value.length-number))
+        }
+        if (focus) {
+          setTimeout(() => {
+            this.focus('end')
+          })
+        }
+      } else {
+        if (stay) {
+          if (focus) {
+            setTimeout(() => {
+              this.focus('end')
+            })
+          }
+        } else {
+          this.$emit('cursorMove', {delta: this.value.length-number, deleting: true, focus, direction:'left'})
+        }
+        this.$emit('input', '')
+      }
+    },
+    cursorMove (data) {
+      console.log('do cursorMove:', data)
+      let {delta, deleting, focus, stay, direction} = data
+      if (direction==='left' || delta<0) {
+        delta = -delta
+        if (deleting) {
+          this.deleteString(delta, focus, stay)
+        } else { // just move
+          if (delta <= this.value.length || stay) { // still in this input
+            let cursor = this.value.length-delta
+            if (cursor<0) cursor = 0
+            if (focus) {
+              console.log('focus on ',cursor)
+              this.focus(cursor)
+            } else {
+              this.setCursor(cursor)
+            }
+          } else { // go out
+            this.$emit('cursorMove', {delta: this.value.length-delta, deleting: false, focus, direction:'left'})
+          }
+        }
+      } else if (direction==='right' || delta>0) {
+        if (delta <= this.value.length || stay) { // still in this input
+          let cursor = delta
+          if (cursor>this.value.length) cursor = this.value.length
+          if (focus) {
+            console.log('focus on ',cursor)
+            this.focus(cursor)
+          } else {
+            this.setCursor(cursor)
+          }
+        } else { // go out
+          this.$emit('cursorMove', {delta: delta-this.value.length, deleting: false, focus, direction:'right'})
+        }
+      }
     },
     blur () {
       this.$refs.input.blur()

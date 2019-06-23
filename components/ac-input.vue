@@ -20,8 +20,12 @@
     :enter="enter"
     :cursor.sync="cursor"
     :cursor-start.sync="cursorStart"
+    :onkeydown="onkeydown"
+    :onfocus="onfocus"
+    :onblur="onblur"
     @parserUpdate="onparser"
     @report="report"
+    @cursorMove="$emit('cursorMove', $event)"
   />
 </template>
 <script>
@@ -55,6 +59,9 @@ export default {
     // outer function
     tab: {type: Function, default:null},
     enter: {type: Function, default:null},
+    onkeydown: {type: Function, default:null},
+    onfocus: {type: Function, default:null},
+    onblur: {type: Function, default:null},
     // Validate
     validator: {type: Function, default: null},
     reportDelay: {type: Number, default: 0},
@@ -124,8 +131,12 @@ export default {
     report (value) {
       this.$emit('report', value)
     },
-    focus () {
-      this.$refs.input.focus()
+    focus (cursor) {
+      this.$refs.input.focus(cursor)
+    },
+    cursorMove (data) {
+      console.log('super do cursorMove:', data)
+      this.$refs.input.cursorMove(data)
     },
     blur () {
       this.$refs.input.blur()

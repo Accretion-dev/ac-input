@@ -67,7 +67,9 @@ export default {
       if (!data||!data.description) {
         return null
       } else {
-        let item = this.$refs.items.querySelector(`div[index="${this.selectIndex}"]`)
+        let item = this.$refs.items
+        if (!item) return null
+        item = item.querySelector(`div[index="${this.selectIndex}"]`)
         if (!item) return null
         let {x,y,width} = item.getBoundingClientRect()
         return {
