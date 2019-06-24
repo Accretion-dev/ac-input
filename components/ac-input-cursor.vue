@@ -703,7 +703,7 @@ export default {
       if (this.onceError) {
         this.onceError = ""
       }
-      console.log('onValueChange', JSON.stringify(newValue), JSON.stringify(oldValue))
+      //console.log('onValueChange', JSON.stringify(newValue), JSON.stringify(oldValue))
       if (this.$refs.input.innerText!==newValue) {
         this.$refs.input.innerText = newValue
         this.getCursor()

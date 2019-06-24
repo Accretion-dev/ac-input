@@ -93,7 +93,7 @@ function inputParser (value) {
       result = parser.parse({content: value})
     } catch (e) {
       error = e
-      //console.error(e)
+      console.error(e)
       return {
         cursor (cursor) {
           return {extract: value, range: null}

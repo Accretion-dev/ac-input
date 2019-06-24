@@ -140,9 +140,6 @@
       <test-block title="Test mongodb" name="mongodb" id="mongodb">
         <mongodb-input />
       </test-block>
-      <test-block title="Test filter parsers" name="filter-parsers" id="filter-parsers">
-        <filter-parsers />
-      </test-block>
     </test-env>
     <div style="height:1000px"> </div>
   </div>
@@ -151,7 +148,6 @@
 <script>
 const {DateTime, Duration} = require('luxon')
 import mongodbInput from './mongodb-input.vue'
-import filterParsers from './filter-parsers.vue'
 function groupNumber (data) {
   if (data < 100) {
     return ['default']
@@ -174,7 +170,7 @@ function groupDate (data) {
 
 export default {
   name: 'app',
-  components: { mongodbInput, filterParsers },
+  components: { mongodbInput },
   data () {
     return {
       values:  [...Array(20).keys()].map(_ => ''),
