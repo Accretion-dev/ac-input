@@ -236,7 +236,7 @@ export default {
           }]
       } else { // {parser, data}
         let data
-        if (this.parserData) {
+        if (this.parserData) { // dynamic auto complete data
           data = this.parserData
         } else {
           data = this.data.data

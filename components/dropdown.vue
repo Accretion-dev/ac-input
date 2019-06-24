@@ -11,7 +11,7 @@
         :style="{'max-height':maxHeight}"
         @keydown="keydown"
       >
-        <div v-for="{show, type, group, index, count, description} of items"
+        <div v-for="{show, type, group, index, count} of items"
              v-show="!(type==='group'&&!show)"
              :key="count"
              :index="count"
