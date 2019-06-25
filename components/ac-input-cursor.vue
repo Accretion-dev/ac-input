@@ -21,7 +21,7 @@
     <pre v-if="rangeCalculator"
          ref="rangeCalculator"
          :class="`${prefixCls}-rangeCalculator`"
-    >{{ rangeCalculator.head }}<span ref="range">{{ rangeCalculator.middle }}</span>{{ rangeCalculator.tail }}</pre>
+    >{{ rangeCalculator.head }}<span ref="range">{{ rangeCalculator.middle }}&zwj;</span>{{ rangeCalculator.tail }}</pre>
     <pre
       ref="placeholder"
       :class="`${prefixCls}-placeholder`"
@@ -182,33 +182,6 @@ export default {
         return ""
       }
     },
-    rangeCalculator () {
-      if (this.calculateCursorPosition && this.range) {
-        let {start, end} = this.range
-        //console.log('range:', {s:this.range.start,e:this.range.end})
-        //end += 1
-        let string = this.value.replace(/[^\n]/g, ' ')
-        let head = string.slice(0,start)
-        let middle = string.slice(start,end)
-        let tail = string.slice(end,)
-        //console.log(`${head.length},${middle.length},${tail.length}`)
-        return {head, middle, tail}
-      } else {
-        return null
-      }
-    },
-    highlightsData () {
-      let outer = this.highlights.map(this.getHighlightsData)
-      let inner = []
-      if (this.range) {
-        if (Array.isArray(this.range)) {
-          inner = [this.range.map(this.getHighlightsData)]
-        } else {
-          inner = [this.getHighlightsData(this.range)]
-        }
-      }
-      return [...inner, ...outer]
-    },
     dropdownData () {
       if (!this.data) {
         return []
@@ -327,6 +300,33 @@ export default {
         }
         return data
       }
+    },
+    rangeCalculator () {
+      if (this.calculateCursorPosition && this.range) {
+        let {start, end} = this.range
+        //console.log('range:', {s:this.range.start,e:this.range.end})
+        //end += 1
+        let string = this.value.replace(/[^\n]/g, ' ')
+        let head = string.slice(0,start)
+        let middle = string.slice(start,end)
+        let tail = string.slice(end,)
+        //console.log(`${head.length},${middle.length},${tail.length}`)
+        return {head, middle, tail}
+      } else {
+        return null
+      }
+    },
+    highlightsData () {
+      let outer = this.highlights.map(this.getHighlightsData)
+      let inner = []
+      if (this.range) {
+        if (Array.isArray(this.range)) {
+          inner = [this.range.map(this.getHighlightsData)]
+        } else {
+          inner = [this.getHighlightsData(this.range)]
+        }
+      }
+      return [...inner, ...outer]
     },
     parser () {
       let result
