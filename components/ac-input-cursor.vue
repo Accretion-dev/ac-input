@@ -186,11 +186,11 @@ export default {
       if (this.calculateCursorPosition && this.range) {
         let {start, end} = this.range
         //console.log('range:', {s:this.range.start,e:this.range.end})
-        end += 1
+        //end += 1
         let string = this.value.replace(/[^\n]/g, ' ')
         let head = string.slice(0,start)
-        let middle = string.slice(start,end+1)
-        let tail = string.slice(end+1,)
+        let middle = string.slice(start,end)
+        let tail = string.slice(end,)
         //console.log(`${head.length},${middle.length},${tail.length}`)
         return {head, middle, tail}
       } else {
@@ -404,8 +404,8 @@ export default {
       if (!message) message=''
       let string = this.value.replace(/[^\n]/g, ' ')
       let head = string.slice(0,start)
-      let middle = string.slice(start,end+1)
-      let tail = string.slice(end+1,)
+      let middle = string.slice(start,end)
+      let tail = string.slice(end,)
       return {head, middle, tail, color, message}
     },
     changeMessage(delta) {

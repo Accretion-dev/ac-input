@@ -128,7 +128,7 @@ function inputParser (value) {
         Object.assign(state, {start, end, lastEnd, output, complete, string, selfKeyPositions})
         return {
           extract: string,
-          range: {start, end: end-1, color: 'rgba(0,255,0,0.5)'},
+          range: {start, end: end, color: 'rgba(0,255,0,0.5)'},
           completeData: output
         }
       },

@@ -215,7 +215,10 @@ export default {
       } else {
         item = this.items[this.selectIndex]
       }
-      this.$emit('complete', {completeValue: item.show, offset: item.cursorOffset})
+      this.$emit('complete', {
+        completeValue: item.show,
+        deltaCursor: item.cursorOffset, // delta cursor position after complete
+      })
     },
     onClick(event) {
       let target = event.target
