@@ -44,7 +44,7 @@
       :match="matchStrRange.extract"
       :data="dropdownData"
       :droptype="droptype"
-      :max-drop="maxDrop"
+      :max-drop="parserOptions.maxDrop?parserOptions.maxDrop:maxDrop"
       :auto-select="autoSelect"
       @complete="complete"
       @match="onmatch"
@@ -234,7 +234,7 @@ export default {
               }
             })
           }]
-      } else { // {parser, data}
+      } else { // {parser, data, options}
         let data
         if (this.parserData) { // dynamic auto complete data
           data = this.parserData
@@ -347,6 +347,15 @@ export default {
         return null
       }
     },
+    parserOptions () {
+      if (!this.data) return {}
+      if (!this.data.parser) return {}
+      if (this.matchStrRange.options) {
+        return this.matchStrRange.options
+      } else {
+        return {}
+      }
+    },
     range () {
       return this.matchStrRange.range
     },
@@ -391,8 +400,8 @@ export default {
       if (this.timer.blur) {
         clearTimeout(this.timer.blur)
       }
-      let {completeValue, offset} = autocomplete
-      let {cursor, value} = this.parser.complete(this.offsetEnd, this.value, completeValue, offset)
+      let {completeValue, deltaCursor} = autocomplete
+      let {cursor, value} = this.parser.complete(this.offsetEnd, this.value, completeValue, deltaCursor)
       this.$emit('input', value)
       setTimeout(() => {
         this.setCursor(cursor)
@@ -935,7 +944,7 @@ export default {
       }
     },
     navigation (event) {
-      if (this.status.drop && this.dropdownObj.itemCount>0) { // move dropdown
+      if (this.dropSwitch && this.status.drop && this.dropdownObj.itemCount>0) { // move dropdown
         event.preventDefault()
         this.dropdownObj.navigation(event.key)
       }
