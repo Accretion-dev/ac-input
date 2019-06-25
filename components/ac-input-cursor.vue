@@ -123,6 +123,7 @@ export default {
     autoSelect: {type: Boolean, default: true},
     disabled: { type: Boolean, default: false },
     newLineWithEnter: { type: Boolean, default: false},
+    autoAlign: { type: Boolean, default: true},
     pinyin: {type: Boolean, default: true},
     calculateCursorPosition: { type: Boolean, default: true},
     // outer function
@@ -885,6 +886,27 @@ export default {
       let sel = window.getSelection()
       let node = sel.baseNode
       let offset = sel.baseOffset
+      if (this.autoAlign) {
+        let beforeLines = this.value.slice(0, this.cursor)
+        let thisline
+        const startsWithBlank = /^(\s)+/
+        if (beforeLines.includes('\n')) { // multi line
+          thisline = beforeLines.split('\n')
+          thisline = thisline[thisline.length-1]
+        } else { // single line
+          thisline = beforeLines
+        }
+        let additionBlank = startsWithBlank.exec(thisline)
+        if (additionBlank) {
+          additionBlank = additionBlank[0]
+        }
+        //console.log('additionBlank', {add: JSON.stringify(additionBlank), thisline, beforeLines})
+        if (additionBlank) {
+          setTimeout(() => {
+            this.insertString(additionBlank, this.cursor+1, focus)
+          })
+        }
+      }
       if (node === this.$refs.input) {
         let nodes = Array.from(this.$refs.input.childNodes)
         node = nodes[offset]
@@ -923,7 +945,7 @@ export default {
           offset = nodes.findIndex(_ => _===node)
           let next = nodes[offset+1]
           let next2 = nodes[offset+2]
-          if (!next || (next.tagName==='BR' && (!next2))) { // end of strin
+          if (!next || (next.tagName==='BR' && (!next2))) { // end of string
             document.execCommand('insertHtml', false, '<br><br>')
           } else if (next && next.tagName === 'BR') {
             document.execCommand('insertHtml', false, '<br><br>')
