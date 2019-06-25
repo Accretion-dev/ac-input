@@ -94,6 +94,7 @@ const CHINESE = /[\u3400-\u9FBF]/
           data,
           match, // can set custom match string for this value
           description, // show extra description for this match: TODO
+          cursorOffset: 0,
         }
       ]
     }
