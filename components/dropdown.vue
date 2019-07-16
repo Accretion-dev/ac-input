@@ -162,7 +162,7 @@ export default {
     this.$watch('data', this.onChange)
     this.onChange()
     this.$watch('goodIndex', value => {
-      if (this.flags.autoSelect) {
+      if (this.flags.autoSelect && this.match) { // no auto select for empty match
         this.flags.autoSelect = false
         if (value.length) {
           this.selectIndex = value[0]
@@ -181,6 +181,7 @@ export default {
       }
     },
     Tab () {
+      // return stop flag
       if (!this.itemCount) {
         return false
       } else if (this.value === this.match){
@@ -193,6 +194,7 @@ export default {
       return true
     },
     Enter () {
+      // return stop flag
       if (!this.itemCount) {
         return false
       } else if (this.value === this.match){
@@ -381,6 +383,7 @@ export default {
         this.flags.autoSelect = true
       }
       this.selectIndex = -1
+      console.log(this.selectIndex)
     },
     doStatistic (__) {
       // not use, dev in furture
