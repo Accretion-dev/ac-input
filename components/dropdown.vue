@@ -11,10 +11,11 @@
         :style="{'max-height':maxHeight}"
         @keydown="keydown"
       >
-        <div v-for="{show, type, group, index, count} of items"
+        <div v-for="{show, type, groupCount, index, count} of items"
              v-show="!(type==='group'&&!show)"
              :key="count"
-             :index="count"
+             :i="count"
+             :g="groupCount"
              :class="{
                [`${prefixCls}-item-group`]: type==='group',
                [`${prefixCls}-item-last`]: type==='last',
@@ -43,7 +44,7 @@ export default {
     droptype: {type: String, default: 'normal'},
     data: { type: Array, default () {return []}, },
     match: { type: String, default: "", },
-    maxDrop: { type: Number, default: 0, },
+    maxDrop: { type: Number, default: 99, },
     height: {type: Number, default: 500},
     minScore: {type: Number, default: 0.4},
     autoSelect: {type: Boolean, default: true},
@@ -58,6 +59,8 @@ export default {
         autoSelect: false
       },
       onChangeCount: 0,
+      groupIndexOffsets: {},
+      groupIndexMap: {},
     }
   },
   computed: {
@@ -69,7 +72,7 @@ export default {
       } else {
         let item = this.$refs.items
         if (!item) return null
-        item = item.querySelector(`div[index="${this.selectIndex}"]`)
+        item = item.querySelector(`div[i="${this.selectIndex}"]`)
         if (!item) return null
         let {x,y,width} = item.getBoundingClientRect()
         return {
@@ -107,15 +110,19 @@ export default {
       let count = 0
       let itemCount = 0
       let goodIndex = []
+      let groupCount = 0
+      this.groupIndexMap = {}
       for (let eachgroup of this.processedData) {
         let group = eachgroup.group
         let datas = eachgroup.data
         if (datas&&datas.length) {
           if (group) {
+            this.groupIndexMap[count] = groupCount
             items.push({
               show: `${group} (${eachgroup.filteredCount})/(${eachgroup.totalCount})`,
               count,
-              type:'group'
+              type:'group',
+              groupCount,
             })
             count += 1
           }
@@ -123,16 +130,18 @@ export default {
             let {data} = eachdata
             items.push(Object.assign({},
               eachdata,
-              {show:data, group, count}
+              {show:data, groupCount, count}
             ))
+            this.groupIndexMap[count] = groupCount
             goodIndex.push(count)
             count += 1
             itemCount += 1
           }
           if (eachgroup.cut) {
+            this.groupIndexMap[count] = groupCount
             items.push({
-              show:`...(${eachgroup.showCount})/(${eachgroup.filteredCount})`,
-              group,
+              show:`...[${eachgroup.offset}~${eachgroup.offset+eachgroup.showCount-1}](${eachgroup.showCount})/(${eachgroup.filteredCount})`,
+              groupCount,
               count,
               type:'last'
             })
@@ -141,8 +150,10 @@ export default {
         } else { // have no data
           if (eachgroup.always&&group) {
             if (eachgroup.data) {
+              this.groupIndexMap[count] = groupCount
               items.push({
                 show: `${group} (${eachgroup.filteredCount})/(${eachgroup.totalCount})`,
+                groupCount,
                 count,
                 type:'group'
               })
@@ -152,6 +163,7 @@ export default {
             count += 1
           }
         }
+        groupCount += 1
       }
       this.$emit('match', {itemCount, goodIndex})
       return {items, goodIndex, itemCount}
@@ -224,7 +236,7 @@ export default {
     },
     onClick(event) {
       let target = event.target
-      let index = Number(target.getAttribute('index'))
+      let index = Number(target.getAttribute('i'))
       let item = this.items[index]
       if (!item || !item.type) {
         this.selectIndex = index
@@ -234,7 +246,7 @@ export default {
     keydown (event) {
     },
     updateScroll() {
-      let query = `.${prefixCls}-item-wrapper>div[index="${this.selectIndex}"]`
+      let query = `.${prefixCls}-item-wrapper>div[i="${this.selectIndex}"]`
       if (this.$el.querySelector) {
         let el = this.$el.querySelector(query)
         if (el) {
@@ -242,56 +254,108 @@ export default {
         }
       }
     },
-    navigation(name) {
+    navigation(name, shiftKey) {
       if (!this.goodIndex.length) return
-      if (name === 'ArrowUp') {
-        let nextIndex = this.selectIndex - 1
-        let nextGoodIndex = this.goodIndex.slice().reverse().find(_ => _<=nextIndex)
-        if (nextGoodIndex === undefined) {
-          nextGoodIndex = this.goodIndex[this.goodIndex.length-1]
+      if (shiftKey) {
+        let groupCount = this.groupIndexMap[this.selectIndex]
+        let cut = this.processedData[groupCount].cut
+        if (!cut) return
+        let offset = this.groupIndexOffsets[groupCount]
+        let total = this.processedData[groupCount].filteredCount
+        let maxDrop = this.processedData[groupCount].maxDrop
+        if (name === 'ArrowUp') {
+          let new_offset = offset - 1
+          new_offset = new_offset > 0 ? new_offset : total - maxDrop
+          new_offset = new_offset > 0 ? new_offset : 0
+          this.$set(this.groupIndexOffsets, groupCount, new_offset)
+        } else if (name === 'ArrowDown') {
+          let new_offset = offset + 1
+          if (new_offset>total - maxDrop) {
+            this.$set(this.groupIndexOffsets, groupCount, 0)
+          } else {
+            this.$set(this.groupIndexOffsets, groupCount, new_offset)
+          }
+        } else if (name === 'PageUp') {
+          let new_offset = offset - maxDrop
+          new_offset = new_offset > 0 ? new_offset : total - maxDrop
+          new_offset = new_offset > 0 ? new_offset : 0
+          this.$set(this.groupIndexOffsets, groupCount, new_offset)
+        } else if (name === 'PageDown') {
+          let new_offset = offset + maxDrop
+          if (new_offset>total - maxDrop) {
+            this.$set(this.groupIndexOffsets, groupCount, 0)
+          } else {
+            this.$set(this.groupIndexOffsets, groupCount, new_offset)
+          }
         }
-        this.selectIndex = nextGoodIndex
-        this.updateScroll()
-      } else if (name === 'ArrowDown') {
-        let nextIndex = this.selectIndex + 1
-        let nextGoodIndex = this.goodIndex.find(_ => _>=nextIndex)
-        if (nextGoodIndex === undefined) {
-          nextGoodIndex = this.goodIndex[0]
+        this.calProcessedData()
+        console.log(JSON.stringify(this.groupIndexOffsets))
+      } else {
+        if (name === 'ArrowUp') {
+          let nextIndex = this.selectIndex - 1
+          let nextGoodIndex = this.goodIndex.slice().reverse().find(_ => _<=nextIndex)
+          if (nextGoodIndex === undefined) {
+            nextGoodIndex = this.goodIndex[this.goodIndex.length-1]
+          }
+          this.selectIndex = nextGoodIndex
+          this.updateScroll()
+        } else if (name === 'ArrowDown') {
+          let nextIndex = this.selectIndex + 1
+          let nextGoodIndex = this.goodIndex.find(_ => _>=nextIndex)
+          if (nextGoodIndex === undefined) {
+            nextGoodIndex = this.goodIndex[0]
+          }
+          this.selectIndex = nextGoodIndex
+          this.updateScroll()
+        } else if (name === 'PageUp') {
+          console.log(name)
+        } else if (name === 'PageDown') {
+          console.log(name)
         }
-        this.selectIndex = nextGoodIndex
-        this.updateScroll()
-      } else if (name === 'PageUp') {
-        console.log(name)
-      } else if (name === 'PageDown') {
-        console.log(name)
       }
     },
-    onChange () {
-      this.$nextTick(() => {
-        this.onChangeCount += 1
-      })
+    calProcessedData (init) {
       let goodCount = 0
       if (!this.data || !this.data.length) {
         this.processedData = []
         return
       }
+      let groupCount = 0
       if (!this.match) { // show all
         this.processedData = []
         for (let eachgroup of this.data) {
           let maxDrop = eachgroup.maxDrop || this.maxDrop
           let length = eachgroup.data?eachgroup.data.length:0
+          if (init) this.groupIndexOffsets[groupCount] = 0
           if (eachgroup.data) {
             goodCount += eachgroup.data.length
             if (maxDrop) {
+              let cut = length > maxDrop
+              let data, start, end
+              let offset = this.groupIndexOffsets[groupCount]
+              if (init) {
+                data = eachgroup.data.slice(0,maxDrop)
+                offset = 0
+              } else {
+                offset = offset ? offset : 0
+                if (offset > length - maxDrop) {
+                  offset = length - maxDrop
+                } else if (offset < 0) {
+                  offset = 0
+                }
+                data = eachgroup.data.slice(offset, offset+maxDrop)
+              }
               this.processedData.push(
                 Object.assign({
                     totalCount: length,
                     filteredCount:length,
                     showCount: maxDrop,
-                    cut: length>maxDrop
+                    cut,
+                    offset,
+                    maxDrop,
                   },
                   eachgroup,
-                  {data: eachgroup.data.slice(0,maxDrop)}
+                  {data},
                 )
               )
             } else {
@@ -301,6 +365,7 @@ export default {
                     filteredCount:length,
                     showCount: length,
                     cut: false,
+                    maxDrop,
                   },
                   eachgroup,
                 )
@@ -313,19 +378,21 @@ export default {
                   filteredCount:0,
                   showCount: 0,
                   cut: false,
+                    maxDrop,
                 },
                 eachgroup,
               )
             )
           }
+          groupCount += 1
         }
       } else { // filter with match
-        //console.log('match:', this.match)
         this.processedData = []
         for (let eachgroup of this.data) {
           let maxDrop = eachgroup.maxDrop || this.maxDrop
           let score = eachgroup.score || this.minScore
           let thisdata = eachgroup.data
+          if (init) this.groupIndexOffsets[groupCount] = 0
           if (thisdata) {
             thisdata.forEach(data => {
               if (Array.isArray(data.match)) {
@@ -341,15 +408,33 @@ export default {
             }
             goodCount += thisdata.length
             if (maxDrop) {
+              let length = thisdata.length
+              let cut = length > maxDrop
+              let data, start, end
+              let offset = this.groupIndexOffsets[groupCount]
+              if (init) {
+                data = thisdata.slice(0,maxDrop)
+                offset = 0
+              } else {
+                offset = offset ? offset : 0
+                if (offset > length - maxDrop) {
+                  offset = length - maxDrop
+                } else if (offset < 0) {
+                  offset = 0
+                }
+                data = thisdata.slice(offset, offset+maxDrop)
+              }
               this.processedData.push(
                 Object.assign({
                     totalCount: eachgroup.data.length,
                     filteredCount:thisdata.length,
                     showCount: maxDrop,
-                    cut: thisdata.length > maxDrop
+                    cut,
+                    offset,
+                    maxDrop,
                   },
                   eachgroup,
-                  {data: thisdata.slice(0,maxDrop)}
+                  {data}
                 )
               )
             } else {
@@ -359,6 +444,7 @@ export default {
                     filteredCount:thisdata.length,
                     showCount: thisdata.length,
                     cut: false,
+                    maxDrop,
                   },
                   eachgroup,
                   {data: thisdata}
@@ -372,18 +458,27 @@ export default {
                   filteredCount:0,
                   showCount: 0,
                   cut: false,
+                  maxDrop,
                 },
                 eachgroup,
               )
             )
           }
+          groupCount += 1
         }
       }
+      return {goodCount}
+    },
+    onChange () {
+      this.$nextTick(() => {
+        this.onChangeCount += 1
+      })
+      this.groupIndexOffsets = {}
+      let {goodCount} = this.calProcessedData(true) // init
       if (goodCount>0 && this.autoSelect) {
         this.flags.autoSelect = true
       }
       this.selectIndex = -1
-      console.log(this.selectIndex)
     },
     doStatistic (__) {
       // not use, dev in furture

@@ -1003,7 +1003,7 @@ export default {
     navigation (event) {
       if (this.dropSwitch && this.status.drop && this.dropdownObj.itemCount>0) { // move dropdown
         event.preventDefault()
-        this.dropdownObj.navigation(event.key)
+        this.dropdownObj.navigation(event.key, event.shiftKey)
       }
     },
     onFocus () {
