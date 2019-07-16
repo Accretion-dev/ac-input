@@ -35,6 +35,9 @@
       @blur="onBlur($event)"
       @input="input"
       @click="getCursor"
+      @copy="oncopy"
+      @cut="oncopy"
+      @paste="onpaste"
     ></pre>
     <dropdown
       ref="dropdownWrapper"
@@ -164,7 +167,8 @@ export default {
         cursor: 1
       },
       dropdownCount: 0,
-      onceError: ""
+      onceError: "",
+      matchStrRange: null,
     }
   },
   computed: {
@@ -361,16 +365,17 @@ export default {
     range () {
       return this.matchStrRange.range
     },
-    matchStrRange () {
-      let result = this.parser.cursor(this.cursor)
-      this.$emit('match', result.extract)
-      return result
-    },
+    //matchStrRange () {
+    //  let result = this.parser.cursor(this.cursor)
+    //  this.$emit('match', result.extract)
+    //  return result
+    //},
   },
   created () {
     if (this.oncreated) {
       this.oncreated(this)
     }
+    this.matchStrRangeChange()
   },
   watch: {
   },
@@ -381,6 +386,8 @@ export default {
     this.$watch('value', this.onValueChange)
     this.$watch('cursor', this.onCursorChange)
     this.$watch('cursorStart', this.onCursorStartChange)
+    this.$watch('parser', this.matchStrRangeChange)
+    this.$watch('cursor', this.matchStrRangeChange)
     this.initMount()
     this.onSizeChange()
     this.dropdownObj = this.$children.find(_ => _.$options.name === 'ac-input-dropdown')
@@ -389,6 +396,33 @@ export default {
     }
   },
   methods: {
+    oncopy (event) {
+      let data
+      if (this.cursor !== this.cursorStart) {
+        data = this.value.slice(this.cursorStart,this.cursor)
+      } else {
+        data = this.value
+      }
+      setTimeout(() => {
+        if (event.clipboardData) {
+          event.clipboardData.setData(data)
+        }
+      })
+    },
+    onpaste (event) {
+      event.preventDefault()
+      if (event.clipboardData) {
+        let data = event.clipboardData.getData('text')
+        this.insertString(data)
+      }
+    },
+    matchStrRangeChange () {
+      if (this.value.length >= this.cursor) {
+        let result = this.parser.cursor(this.cursor)
+        this.$emit('match', result.extract)
+        this.matchStrRange = result
+      }
+    },
     setError (error) {
        this.onceError = error
     },
@@ -1015,7 +1049,7 @@ export default {
       }
     },
     focus (cursor) {
-      this.$refs.input.focus()
+      this.$refs.input.focus({preventScroll: true})
       if (cursor!==undefined) {
         cursor = this.calculateCursorNumber(cursor)
         this.setCursor(cursor)
@@ -1028,6 +1062,8 @@ export default {
       let head = this.value.slice(0,cursor)
       let tail = this.value.slice(cursor)
       let newValue = `${head}${string}${tail}`
+      this.$emit('update:cursor', cursor + string.length)
+      this.$emit('update:cursorStart', cursor + string.length)
       this.$emit('input', newValue)
       if (focus) {
         setTimeout(() => {
