@@ -11,19 +11,20 @@
         :style="{'max-height':maxHeight}"
         @keydown="keydown"
       >
-        <div v-for="{show, type, groupCount, index, count} of items"
+        <pre v-for="{show, type, groupCount, index, count} of items"
              v-show="!(type==='group'&&!show)"
              :key="count"
              :i="count"
              :g="groupCount"
              :class="{
+               [`${prefixCls}-item`]: true,
                [`${prefixCls}-item-group`]: type==='group',
                [`${prefixCls}-item-last`]: type==='last',
                [`${prefixCls}-selected`]: count===selectIndex,
               }"
              @mousedown.prevent="onClick"
              @keydown="keydown"
-        > {{ show }} </div>
+        >{{ show }}</pre>
       </div>
     </template>
   </span>
@@ -45,7 +46,7 @@ export default {
     data: { type: Array, default () {return []}, },
     match: { type: String, default: "", },
     maxDrop: { type: Number, default: 99, },
-    height: {type: Number, default: 500},
+    height: {type: Number, default: 900},
     minScore: {type: Number, default: 0.4},
     autoSelect: {type: Boolean, default: true},
   },
@@ -72,7 +73,7 @@ export default {
       } else {
         let item = this.$refs.items
         if (!item) return null
-        item = item.querySelector(`div[i="${this.selectIndex}"]`)
+        item = item.querySelector(`pre[i="${this.selectIndex}"]`)
         if (!item) return null
         let {x,y,width} = item.getBoundingClientRect()
         return {
@@ -114,6 +115,7 @@ export default {
       this.groupIndexMap = {}
       for (let eachgroup of this.processedData) {
         let group = eachgroup.group
+        let groupComments = eachgroup.groupComments
         let datas = eachgroup.data
         if (datas&&datas.length) {
           if (group) {
@@ -125,6 +127,21 @@ export default {
               groupCount,
             })
             count += 1
+          }
+          if (groupComments) {
+            for (let eachdata of groupComments) {
+              this.groupIndexMap[count] = groupCount
+              items.push(Object.assign({},
+                eachdata,
+                {
+                  show: eachdata.data,
+                  count,
+                  groupCount,
+                  type:'groupComments',
+                }
+              ))
+              count += 1
+            }
           }
           for (let eachdata of datas) {
             let {data} = eachdata
@@ -161,6 +178,21 @@ export default {
               items.push({show: group, count, type:'group'})
             }
             count += 1
+            if (groupComments) {
+              for (let eachdata of groupComments) {
+                this.groupIndexMap[count] = groupCount
+                items.push(Object.assign({},
+                  eachdata,
+                  {
+                    show: eachdata.data,
+                    count,
+                    groupCount,
+                    type:'groupComments',
+                  }
+                ))
+                count += 1
+              }
+            }
           }
         }
         groupCount += 1
@@ -229,10 +261,12 @@ export default {
       } else {
         item = this.items[this.selectIndex]
       }
-      this.$emit('complete', {
-        completeValue: item.show,
-        deltaCursor: item.cursorOffset, // delta cursor position after complete
-      })
+      if (!item.noComplete) {
+        this.$emit('complete', {
+          completeValue: item.show,
+          deltaCursor: item.cursorOffset, // delta cursor position after complete
+        })
+      }
     },
     onClick(event) {
       let target = event.target
@@ -246,7 +280,7 @@ export default {
     keydown (event) {
     },
     updateScroll() {
-      let query = `.${prefixCls}-item-wrapper>div[i="${this.selectIndex}"]`
+      let query = `.${prefixCls}-item-wrapper>pre[i="${this.selectIndex}"]`
       if (this.$el.querySelector) {
         let el = this.$el.querySelector(query)
         if (el) {
@@ -289,7 +323,6 @@ export default {
           }
         }
         this.calProcessedData()
-        console.log(JSON.stringify(this.groupIndexOffsets))
       } else {
         if (name === 'ArrowUp') {
           let nextIndex = this.selectIndex - 1
@@ -318,7 +351,7 @@ export default {
       let goodCount = 0
       if (!this.data || !this.data.length) {
         this.processedData = []
-        return
+        return {goodCount}
       }
       let groupCount = 0
       if (!this.match) { // show all
@@ -327,6 +360,17 @@ export default {
           let maxDrop = eachgroup.maxDrop || this.maxDrop
           let length = eachgroup.data?eachgroup.data.length:0
           if (init) this.groupIndexOffsets[groupCount] = 0
+          let groupComments
+          if (eachgroup.groupComments) {
+            groupComments = []
+            for (let each of eachgroup.groupComments) {
+              if (typeof(each) !== 'object') {
+                groupComments.push({data: String(each)})
+              } else {
+                groupComments.push(each)
+              }
+            }
+          }
           if (eachgroup.data) {
             goodCount += eachgroup.data.length
             if (maxDrop) {
@@ -355,7 +399,7 @@ export default {
                     maxDrop,
                   },
                   eachgroup,
-                  {data},
+                  {data, groupComments},
                 )
               )
             } else {
@@ -368,6 +412,7 @@ export default {
                     maxDrop,
                   },
                   eachgroup,
+                  {groupComments},
                 )
               )
             }
@@ -381,6 +426,7 @@ export default {
                     maxDrop,
                 },
                 eachgroup,
+                {groupComments},
               )
             )
           }
@@ -393,15 +439,37 @@ export default {
           let score = eachgroup.score || this.minScore
           let thisdata = eachgroup.data
           if (init) this.groupIndexOffsets[groupCount] = 0
-          if (thisdata) {
-            thisdata.forEach(data => {
-              if (Array.isArray(data.match)) {
-                data.score = _.max(data.match.map(__ => LiquidMetal.score(__, this.match)))
+          let groupComments
+          if (eachgroup.groupComments) {
+            groupComments = []
+            for (let each of eachgroup.groupComments) {
+              if (typeof(each) !== 'object') {
+                groupComments.push({data: String(each)})
               } else {
-                data.score = LiquidMetal.score(data.match, this.match)
+                groupComments.push(each)
               }
-            })
-            thisdata = thisdata.filter(_ => _.score>score)
+            }
+          }
+          if (thisdata) {
+            if (!eachgroup.itemAlways) { // do filter
+              thisdata.forEach(data => {
+                if (Array.isArray(data.match)) {
+                  data.score = _.max(data.match.map(__ => LiquidMetal.score(__, this.match)))
+                } else {
+                  data.score = LiquidMetal.score(data.match, this.match)
+                }
+              })
+              thisdata = thisdata.filter(_ => _.score>score)
+            } else {
+              thisdata.forEach(data => {
+                data.score = 1
+              })
+            }
+            if (eachgroup.noComplete) {
+              thisdata.forEach(_ => {
+                _.noComplete = true
+              })
+            }
             if (!eachgroup.noSort) {
               thisdata = _.sortBy(thisdata, _ => _.score)
               thisdata.reverse()
@@ -434,7 +502,7 @@ export default {
                     maxDrop,
                   },
                   eachgroup,
-                  {data}
+                  {data, groupComments}
                 )
               )
             } else {
@@ -447,7 +515,7 @@ export default {
                     maxDrop,
                   },
                   eachgroup,
-                  {data: thisdata}
+                  {data: thisdata, groupComments}
                 )
               )
             }
@@ -461,6 +529,7 @@ export default {
                   maxDrop,
                 },
                 eachgroup,
+                {groupComments},
               )
             )
           }
@@ -544,6 +613,9 @@ $pre: ac-input-dropdown;
   overflow: auto;
   width: max-content;
 }
+.#{$pre}-item {
+  margin: 0;
+}
 .#{$pre}-item-group {
   font-weight: 600;
   border-width: 1px 1px 0px 1px;
@@ -553,7 +625,7 @@ $pre: ac-input-dropdown;
   font-size: 80%;
   border-width: 0px 1px 1px 1px !important;
 }
-.#{$pre}-item-wrapper > div {
+.#{$pre}-item-wrapper > pre {
   padding: 0px 3px;
   border-style: dashed;
   border-width: 0px 1px;
@@ -566,7 +638,7 @@ $pre: ac-input-dropdown;
   margin: 0;
   padding: 0;
 }
-.#{$pre}-item-wrapper > div:hover {
+.#{$pre}-item-wrapper > pre:hover {
   background-color: #ddffd5;
 }
 .#{$pre}-item-wrapper:last-child {
