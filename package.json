@@ -13,7 +13,7 @@
   "author": "Fmajor",
   "license": "MIT",
   "devDependencies": {
-    "node-sass": "^4.12.0",
+    "node-sass": "^4.13.1",
     "pegjs": "^0.10.0",
     "sass-loader": "^7.1.0"
   },
